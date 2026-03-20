@@ -1,0 +1,86 @@
+syntax = "proto3";
+package email;
+option go_package = "github.com/yourname/platform/shared/proto/email";
+
+import "common.proto";
+
+service EmailService {
+  // 发送通知（异步，投递到队列后立即返回）
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+
+  // 查询通知发送状态
+  rpc GetNotificationStatus(GetNotificationStatusRequest) returns (NotificationStatus);
+}
+
+// ── SendNotification ──────────────────────────
+message SendNotificationRequest {
+  string           user_id  = 1;
+  string           email    = 2; // 收件地址
+  NotificationType type     = 3;
+  NotificationData data     = 4; // 根据 type 填充对应字段
+}
+
+message SendNotificationResponse {
+  string notification_id = 1; // 用于后续查询状态
+}
+
+// ── 通知类型 ───────────────────────────────────
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED    = 0;
+  NOTIFICATION_TYPE_ORDER_PLACED   = 1; // 下单成功
+  NOTIFICATION_TYPE_ORDER_PAID     = 2; // 支付成功
+  NOTIFICATION_TYPE_ORDER_SHIPPED  = 3; // 已发货
+  NOTIFICATION_TYPE_ORDER_DELIVERED = 4; // 已收货
+  NOTIFICATION_TYPE_REFUND_SUCCESS = 5; // 退款成功
+  NOTIFICATION_TYPE_WELCOME        = 6; // 注册欢迎邮件
+}
+
+// 各类通知所需的数据（用 oneof 确保类型安全）
+message NotificationData {
+  oneof payload {
+    OrderNotification   order   = 1;
+    ShipmentNotification shipment = 2;
+    RefundNotification  refund  = 3;
+    WelcomeNotification welcome = 4;
+  }
+}
+
+message OrderNotification {
+  string       order_id    = 1;
+  common.Money total_price = 2;
+  int64        created_at  = 3;
+}
+
+message ShipmentNotification {
+  string order_id         = 1;
+  string tracking_number  = 2; // 快递单号
+  string carrier          = 3; // 快递公司
+}
+
+message RefundNotification {
+  string       order_id   = 1;
+  common.Money amount     = 2;
+}
+
+message WelcomeNotification {
+  string username = 1;
+}
+
+// ── GetNotificationStatus ─────────────────────
+message GetNotificationStatusRequest {
+  string notification_id = 1;
+}
+
+message NotificationStatus {
+  string           notification_id = 1;
+  DeliveryStatus   status          = 2;
+  int64            sent_at         = 3;
+  string           error_message   = 4; // 失败时的错误原因
+}
+
+enum DeliveryStatus {
+  DELIVERY_STATUS_UNSPECIFIED = 0;
+  DELIVERY_STATUS_PENDING     = 1; // 队列中
+  DELIVERY_STATUS_SENT        = 2; // 已发送
+  DELIVERY_STATUS_FAILED      = 3; // 发送失败
+}

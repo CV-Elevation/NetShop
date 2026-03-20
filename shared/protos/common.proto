@@ -1,0 +1,31 @@
+syntax = "proto3";
+package common;
+option go_package = "github.com/yourname/platform/shared/proto/common";
+
+// 通用空响应
+message Empty {}
+
+// 通用分页参数
+message Pagination {
+  int32 page      = 1;
+  int32 page_size = 2;
+}
+
+// 通用金额（单位：分，避免浮点精度问题）
+message Money {
+  int64  amount   = 1;
+  string currency = 2; // "CNY" / "USD"
+}
+
+// 商品基础信息（多个服务共用）
+message Product {
+  string id          = 1;
+  string name        = 2;
+  string description = 3;
+  Money  price       = 4;
+  string category    = 5;
+  string image_url   = 6;
+  int32  stock       = 7;
+  float  rating      = 8;
+  int64  sales_count = 9;
+}

@@ -1,0 +1,76 @@
+syntax = "proto3";
+package payment;
+option go_package = "github.com/yourname/platform/shared/proto/payment";
+
+import "common.proto";
+
+service PaymentService {
+  // 发起支付
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+
+  // 查询支付状态
+  rpc GetPayment(GetPaymentRequest) returns (Payment);
+
+  // 申请退款
+  rpc Refund(RefundRequest) returns (RefundResponse);
+}
+
+// ── CreatePayment ─────────────────────────────
+message CreatePaymentRequest {
+  string        order_id = 1;
+  string        user_id  = 2;
+  common.Money  amount   = 3;
+  PaymentMethod method   = 4;
+}
+
+message CreatePaymentResponse {
+  string        payment_id  = 1;
+  PaymentStatus status      = 2;
+  string        pay_url     = 3; // 跳转支付页面的 URL（微信/支付宝）
+}
+
+// ── GetPayment ────────────────────────────────
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+// ── Refund ────────────────────────────────────
+message RefundRequest {
+  string       payment_id = 1;
+  string       order_id   = 2;
+  common.Money amount     = 3; // 退款金额（支持部分退款）
+  string       reason     = 4;
+}
+
+message RefundResponse {
+  string        refund_id = 1;
+  PaymentStatus status    = 2;
+}
+
+// ── 支付记录 ───────────────────────────────────
+message Payment {
+  string        payment_id  = 1;
+  string        order_id    = 2;
+  string        user_id     = 3;
+  common.Money  amount      = 4;
+  PaymentMethod method      = 5;
+  PaymentStatus status      = 6;
+  int64         created_at  = 7;
+  int64         paid_at     = 8; // 实际支付时间，0 表示未支付
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_WECHAT      = 1;
+  PAYMENT_METHOD_ALIPAY      = 2;
+  PAYMENT_METHOD_CARD        = 3;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING     = 1; // 待支付
+  PAYMENT_STATUS_SUCCESS     = 2; // 支付成功
+  PAYMENT_STATUS_FAILED      = 3; // 支付失败
+  PAYMENT_STATUS_REFUNDED    = 4; // 已退款
+  PAYMENT_STATUS_REFUNDING   = 5; // 退款中
+}

@@ -1,0 +1,54 @@
+syntax = "proto3";
+package ad;
+option go_package = "github.com/yourname/platform/shared/proto/ad";
+
+import "common.proto";
+
+service AdService {
+  // 获取广告内容
+  rpc GetAds(GetAdsRequest) returns (GetAdsResponse);
+
+  // 记录广告曝光/点击（用于统计效果）
+  rpc RecordAdEvent(AdEvent) returns (common.Empty);
+}
+
+// ── GetAds ────────────────────────────────────
+message GetAdsRequest {
+  string   user_id  = 1;
+  AdSlot   slot     = 2; // 广告位置
+  int32    limit    = 3;
+}
+
+// 广告位，不同位置尺寸和样式不同
+enum AdSlot {
+  AD_SLOT_UNSPECIFIED = 0;
+  AD_SLOT_BANNER      = 1; // 首页横幅
+  AD_SLOT_SIDEBAR     = 2; // 侧边栏
+  AD_SLOT_FEED        = 3; // 信息流中插入
+}
+
+message GetAdsResponse {
+  repeated Ad items = 1;
+}
+
+message Ad {
+  string  id          = 1;
+  string  title       = 2;
+  string  image_url   = 3;
+  string  target_url  = 4; // 点击跳转地址
+  AdSlot  slot        = 5;
+}
+
+// ── RecordAdEvent ─────────────────────────────
+message AdEvent {
+  string      ad_id     = 1;
+  string      user_id   = 2;
+  AdEventType type      = 3;
+  int64       timestamp = 4;
+}
+
+enum AdEventType {
+  AD_EVENT_UNSPECIFIED = 0;
+  AD_EVENT_IMPRESSION  = 1; // 曝光
+  AD_EVENT_CLICK       = 2; // 点击
+}

@@ -1,0 +1,86 @@
+syntax = "proto3";
+package checkout;
+option go_package = "github.com/yourname/platform/shared/proto/checkout";
+
+import "common.proto";
+
+service CheckoutService {
+  // 发起结算：从购物车生成订单，冻结库存
+  rpc PlaceOrder(PlaceOrderRequest) returns (PlaceOrderResponse);
+
+  // 查询订单详情
+  rpc GetOrder(GetOrderRequest) returns (Order);
+
+  // 查询用户订单列表
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+}
+
+// ── PlaceOrder ────────────────────────────────
+message PlaceOrderRequest {
+  string  user_id    = 1;
+  Address address    = 2; // 收货地址
+  string  remark     = 3; // 备注（可选）
+}
+
+message PlaceOrderResponse {
+  string       order_id    = 1;
+  common.Money total_price = 2;
+  OrderStatus  status      = 3;
+}
+
+// ── GetOrder ──────────────────────────────────
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+// ── ListOrders ────────────────────────────────
+message ListOrdersRequest {
+  string            user_id    = 1;
+  OrderStatus       status     = 2; // 0 表示查全部
+  common.Pagination pagination = 3;
+}
+
+message ListOrdersResponse {
+  repeated Order items = 1;
+  int32          total = 2;
+}
+
+// ── 订单数据结构 ───────────────────────────────
+message Order {
+  string             order_id    = 1;
+  string             user_id     = 2;
+  repeated OrderItem items       = 3;
+  common.Money       total_price = 4;
+  OrderStatus        status      = 5;
+  Address            address     = 6;
+  string             remark      = 7;
+  int64              created_at  = 8;
+  int64              updated_at  = 9;
+}
+
+message OrderItem {
+  string       product_id = 1;
+  string       name       = 2;
+  common.Money price      = 3;
+  int32        quantity   = 4;
+  common.Money subtotal   = 5;
+}
+
+message Address {
+  string receiver = 1; // 收件人
+  string phone    = 2;
+  string province = 3;
+  string city     = 4;
+  string district = 5;
+  string detail   = 6; // 详细地址
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING     = 1; // 待支付
+  ORDER_STATUS_PAID        = 2; // 已支付
+  ORDER_STATUS_SHIPPED     = 3; // 已发货
+  ORDER_STATUS_DELIVERED   = 4; // 已收货
+  ORDER_STATUS_CANCELLED   = 5; // 已取消
+  ORDER_STATUS_REFUNDING   = 6; // 退款中
+}

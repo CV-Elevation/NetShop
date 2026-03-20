@@ -1,0 +1,45 @@
+syntax = "proto3";
+package product;
+option go_package = "github.com/yourname/platform/shared/proto/product";
+
+import "common.proto";
+
+service ProductService {
+  // 按 ID 查询单个商品
+  rpc GetProduct(GetProductRequest) returns (common.Product);
+
+  // 查询商品列表（支持分类过滤）
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+
+  // AI 搜索：自然语言关键词 + 条件过滤（供 aiassistant 调用）
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+}
+
+// ── GetProduct ────────────────────────────────
+message GetProductRequest {
+  string id = 1;
+}
+
+// ── ListProducts ──────────────────────────────
+message ListProductsRequest {
+  string           category   = 1; // 空表示不限分类
+  common.Pagination pagination = 2;
+}
+
+message ListProductsResponse {
+  repeated common.Product items = 1;
+  int32                   total = 2;
+}
+
+// ── SearchProducts ────────────────────────────
+message SearchProductsRequest {
+  string            keyword    = 1; // 自然语言关键词
+  int64             max_price  = 2; // 最高价格（分），0 表示不限
+  string            category   = 3; // 空表示不限
+  common.Pagination pagination = 4;
+}
+
+message SearchProductsResponse {
+  repeated common.Product items = 1;
+  int32                   total = 2;
+}

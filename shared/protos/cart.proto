@@ -1,0 +1,54 @@
+syntax = "proto3";
+package cart;
+option go_package = "github.com/yourname/platform/shared/proto/cart";
+
+import "common.proto";
+
+service CartService {
+  // 添加商品到购物车
+  rpc AddItem(AddItemRequest) returns (AddItemResponse);
+
+  // 查询购物车
+  rpc GetCart(GetCartRequest) returns (GetCartResponse);
+
+  // 清空购物车（结算完成后调用）
+  rpc ClearCart(ClearCartRequest) returns (common.Empty);
+}
+
+// ── AddItem ───────────────────────────────────
+message AddItemRequest {
+  string user_id    = 1;
+  string product_id = 2;
+  int32  quantity   = 3;
+}
+
+message AddItemResponse {
+  CartItem item        = 1; // 返回添加后的购物车条目
+  int32    total_items = 2; // 购物车当前总条目数
+}
+
+// ── GetCart ───────────────────────────────────
+message GetCartRequest {
+  string user_id = 1;
+}
+
+message GetCartResponse {
+  string             user_id     = 1;
+  repeated CartItem  items       = 2;
+  common.Money       total_price = 3; // 所有商品合计
+}
+
+// ── ClearCart ─────────────────────────────────
+message ClearCartRequest {
+  string user_id = 1;
+}
+
+// ── 购物车条目 ─────────────────────────────────
+message CartItem {
+  string         product_id = 1;
+  string         name       = 2;
+  common.Money   price      = 3; // 单价
+  int32          quantity   = 4;
+  common.Money   subtotal   = 5; // 小计 = 单价 × 数量
+  string         image_url  = 6;
+}

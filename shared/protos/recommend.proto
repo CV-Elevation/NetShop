@@ -1,0 +1,50 @@
+syntax = "proto3";
+package recommend;
+option go_package = "github.com/yourname/platform/shared/proto/recommend";
+
+import "common.proto";
+
+service RecommendService {
+  // 获取推荐商品列表
+  rpc GetRecommendations(RecommendRequest) returns (RecommendResponse);
+
+  // 记录用户行为（为后续优化推荐质量积累数据）
+  rpc RecordBehavior(BehaviorEvent) returns (common.Empty);
+}
+
+// ── GetRecommendations ────────────────────────
+message RecommendRequest {
+  string user_id   = 1;
+  Scene  scene     = 2;
+  int32  limit     = 3;
+}
+
+// 推荐场景：不同场景返回不同策略的结果
+enum Scene {
+  SCENE_UNSPECIFIED   = 0;
+  SCENE_HOMEPAGE      = 1; // 首页推荐
+  SCENE_PRODUCT_DETAIL = 2; // 商品详情页（看了还看）
+  SCENE_CART          = 3; // 购物车页（买了还买）
+  SCENE_POST_PURCHASE = 4; // 购买后推荐
+}
+
+message RecommendResponse {
+  repeated common.Product items    = 1;
+  string                  strategy = 2; // 本次用了哪种策略，便于调试
+}
+
+// ── RecordBehavior ────────────────────────────
+message BehaviorEvent {
+  string        user_id    = 1;
+  string        product_id = 2;
+  BehaviorType  type       = 3;
+  int64         timestamp  = 4;
+}
+
+enum BehaviorType {
+  BEHAVIOR_UNSPECIFIED = 0;
+  BEHAVIOR_VIEW        = 1; // 浏览
+  BEHAVIOR_CLICK       = 2; // 点击
+  BEHAVIOR_CART        = 3; // 加购
+  BEHAVIOR_PURCHASE    = 4; // 购买
+}
