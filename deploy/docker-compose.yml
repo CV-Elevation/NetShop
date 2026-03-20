@@ -54,7 +54,7 @@ services:
 
   # ── Kafka ────────────────────────────────────────────────────
   kafka:
-    image: bitnami/kafka:3.7
+    image: bitnamilegacy/kafka:latest
     container_name: netshop-kafka
     restart: unless-stopped
     ports:
