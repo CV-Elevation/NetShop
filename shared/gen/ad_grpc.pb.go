@@ -8,10 +8,10 @@ package ad
 
 import (
 	context "context"
-	common "github.com/yourname/platform/shared/proto/common"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	common "kuoz/netshop/platform/shared/proto/common"
 )
 
 // This is a compile-time assertion to ensure that this generated file

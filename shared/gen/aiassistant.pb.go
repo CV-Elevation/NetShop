@@ -7,9 +7,9 @@
 package aiassistant
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -284,7 +284,7 @@ const file_aiassistant_proto_rawDesc = "" +
 	"\x12AiAssistantService\x12;\n" +
 	"\x04Chat\x12\x18.aiassistant.ChatRequest\x1a\x19.aiassistant.ChatResponse\x12@\n" +
 	"\n" +
-	"ChatStream\x12\x18.aiassistant.ChatRequest\x1a\x16.aiassistant.ChatChunk0\x01B7Z5github.com/yourname/platform/shared/proto/aiassistantb\x06proto3"
+	"ChatStream\x12\x18.aiassistant.ChatRequest\x1a\x16.aiassistant.ChatChunk0\x01B0Z.kuoz/netshop/platform/shared/proto/aiassistantb\x06proto3"
 
 var (
 	file_aiassistant_proto_rawDescOnce sync.Once

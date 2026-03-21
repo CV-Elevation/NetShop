@@ -7,9 +7,9 @@
 package ad
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -410,7 +410,7 @@ const file_ad_proto_rawDesc = "" +
 	"\x0eAD_EVENT_CLICK\x10\x022i\n" +
 	"\tAdService\x12/\n" +
 	"\x06GetAds\x12\x11.ad.GetAdsRequest\x1a\x12.ad.GetAdsResponse\x12+\n" +
-	"\rRecordAdEvent\x12\v.ad.AdEvent\x1a\r.common.EmptyB.Z,github.com/yourname/platform/shared/proto/adb\x06proto3"
+	"\rRecordAdEvent\x12\v.ad.AdEvent\x1a\r.common.EmptyB'Z%kuoz/netshop/platform/shared/proto/adb\x06proto3"
 
 var (
 	file_ad_proto_rawDescOnce sync.Once

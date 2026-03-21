@@ -1,6 +1,6 @@
 syntax = "proto3";
 package payment;
-option go_package = "github.com/yourname/platform/shared/proto/payment";
+option go_package = "kuoz/netshop/platform/shared/proto/payment";
 
 import "common.proto";
 

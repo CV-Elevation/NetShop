@@ -7,9 +7,9 @@
 package cart
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,6 +21,62 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+// ── 购物车条目 ─────────────────────────────────
+type StockStatus int32
+
+const (
+	StockStatus_STOCK_STATUS_UNKNOWN StockStatus = 0
+	StockStatus_IN_STOCK             StockStatus = 1 // 库存充足
+	StockStatus_LOW_STOCK            StockStatus = 2 // 库存紧张（比如 < 10件）
+	StockStatus_INSUFFICIENT         StockStatus = 3 // 库存不足（少于用户选择的数量）
+	StockStatus_OUT_OF_STOCK         StockStatus = 4 // 完全售罄
+)
+
+// Enum value maps for StockStatus.
+var (
+	StockStatus_name = map[int32]string{
+		0: "STOCK_STATUS_UNKNOWN",
+		1: "IN_STOCK",
+		2: "LOW_STOCK",
+		3: "INSUFFICIENT",
+		4: "OUT_OF_STOCK",
+	}
+	StockStatus_value = map[string]int32{
+		"STOCK_STATUS_UNKNOWN": 0,
+		"IN_STOCK":             1,
+		"LOW_STOCK":            2,
+		"INSUFFICIENT":         3,
+		"OUT_OF_STOCK":         4,
+	}
+)
+
+func (x StockStatus) Enum() *StockStatus {
+	p := new(StockStatus)
+	*p = x
+	return p
+}
+
+func (x StockStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StockStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_cart_proto_enumTypes[0].Descriptor()
+}
+
+func (StockStatus) Type() protoreflect.EnumType {
+	return &file_cart_proto_enumTypes[0]
+}
+
+func (x StockStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StockStatus.Descriptor instead.
+func (StockStatus) EnumDescriptor() ([]byte, []int) {
+	return file_cart_proto_rawDescGZIP(), []int{0}
+}
 
 // ── AddItem ───────────────────────────────────
 type AddItemRequest struct {
@@ -182,9 +238,10 @@ func (x *GetCartRequest) GetUserId() string {
 
 type GetCartResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Items         []*CartItem            `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
-	TotalPrice    *common.Money          `protobuf:"bytes,3,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"` // 所有商品合计
+	Items         []*CartItem            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	TotalPrice    *common.Money          `protobuf:"bytes,2,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"`  // 所有商品合计
+	TotalCount    int32                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"` // 购物车商品总数
+	HasInvalid    bool                   `protobuf:"varint,4,opt,name=has_invalid,json=hasInvalid,proto3" json:"has_invalid,omitempty"` // 是否存在库存问题的商品（方便前端显示全局提示）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -219,13 +276,6 @@ func (*GetCartResponse) Descriptor() ([]byte, []int) {
 	return file_cart_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetCartResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
 func (x *GetCartResponse) GetItems() []*CartItem {
 	if x != nil {
 		return x.Items
@@ -238,6 +288,20 @@ func (x *GetCartResponse) GetTotalPrice() *common.Money {
 		return x.TotalPrice
 	}
 	return nil
+}
+
+func (x *GetCartResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *GetCartResponse) GetHasInvalid() bool {
+	if x != nil {
+		return x.HasInvalid
+	}
+	return false
 }
 
 // ── ClearCart ─────────────────────────────────
@@ -285,15 +349,18 @@ func (x *ClearCartRequest) GetUserId() string {
 	return ""
 }
 
-// ── 购物车条目 ─────────────────────────────────
 type CartItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Price         *common.Money          `protobuf:"bytes,3,opt,name=price,proto3" json:"price,omitempty"` // 单价
-	Quantity      int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
-	Subtotal      *common.Money          `protobuf:"bytes,5,opt,name=subtotal,proto3" json:"subtotal,omitempty"` // 小计 = 单价 × 数量
-	ImageUrl      string                 `protobuf:"bytes,6,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ProductId string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Price     *common.Money          `protobuf:"bytes,3,opt,name=price,proto3" json:"price,omitempty"`
+	Quantity  int32                  `protobuf:"varint,4,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Subtotal  *common.Money          `protobuf:"bytes,5,opt,name=subtotal,proto3" json:"subtotal,omitempty"`
+	ImageUrl  string                 `protobuf:"bytes,6,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	// 库存相关
+	StockStatus   StockStatus `protobuf:"varint,7,opt,name=stock_status,json=stockStatus,proto3,enum=cart.StockStatus" json:"stock_status,omitempty"` // 库存状态
+	StockCount    int32       `protobuf:"varint,8,opt,name=stock_count,json=stockCount,proto3" json:"stock_count,omitempty"`                          // 当前可用库存数量
+	Checked       bool        `protobuf:"varint,9,opt,name=checked,proto3" json:"checked,omitempty"`                                                  // 是否勾选（用于部分结算）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -370,6 +437,27 @@ func (x *CartItem) GetImageUrl() string {
 	return ""
 }
 
+func (x *CartItem) GetStockStatus() StockStatus {
+	if x != nil {
+		return x.StockStatus
+	}
+	return StockStatus_STOCK_STATUS_UNKNOWN
+}
+
+func (x *CartItem) GetStockCount() int32 {
+	if x != nil {
+		return x.StockCount
+	}
+	return 0
+}
+
+func (x *CartItem) GetChecked() bool {
+	if x != nil {
+		return x.Checked
+	}
+	return false
+}
+
 var File_cart_proto protoreflect.FileDescriptor
 
 const file_cart_proto_rawDesc = "" +
@@ -386,14 +474,17 @@ const file_cart_proto_rawDesc = "" +
 	"\vtotal_items\x18\x02 \x01(\x05R\n" +
 	"totalItems\")\n" +
 	"\x0eGetCartRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x80\x01\n" +
-	"\x0fGetCartResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12$\n" +
-	"\x05items\x18\x02 \x03(\v2\x0e.cart.CartItemR\x05items\x12.\n" +
-	"\vtotal_price\x18\x03 \x01(\v2\r.common.MoneyR\n" +
-	"totalPrice\"+\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xa9\x01\n" +
+	"\x0fGetCartResponse\x12$\n" +
+	"\x05items\x18\x01 \x03(\v2\x0e.cart.CartItemR\x05items\x12.\n" +
+	"\vtotal_price\x18\x02 \x01(\v2\r.common.MoneyR\n" +
+	"totalPrice\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x05R\n" +
+	"totalCount\x12\x1f\n" +
+	"\vhas_invalid\x18\x04 \x01(\bR\n" +
+	"hasInvalid\"+\n" +
 	"\x10ClearCartRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xc6\x01\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xb7\x02\n" +
 	"\bCartItem\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x12\n" +
@@ -401,11 +492,21 @@ const file_cart_proto_rawDesc = "" +
 	"\x05price\x18\x03 \x01(\v2\r.common.MoneyR\x05price\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\x05R\bquantity\x12)\n" +
 	"\bsubtotal\x18\x05 \x01(\v2\r.common.MoneyR\bsubtotal\x12\x1b\n" +
-	"\timage_url\x18\x06 \x01(\tR\bimageUrl2\xb1\x01\n" +
+	"\timage_url\x18\x06 \x01(\tR\bimageUrl\x124\n" +
+	"\fstock_status\x18\a \x01(\x0e2\x11.cart.StockStatusR\vstockStatus\x12\x1f\n" +
+	"\vstock_count\x18\b \x01(\x05R\n" +
+	"stockCount\x12\x18\n" +
+	"\achecked\x18\t \x01(\bR\achecked*h\n" +
+	"\vStockStatus\x12\x18\n" +
+	"\x14STOCK_STATUS_UNKNOWN\x10\x00\x12\f\n" +
+	"\bIN_STOCK\x10\x01\x12\r\n" +
+	"\tLOW_STOCK\x10\x02\x12\x10\n" +
+	"\fINSUFFICIENT\x10\x03\x12\x10\n" +
+	"\fOUT_OF_STOCK\x10\x042\xb1\x01\n" +
 	"\vCartService\x126\n" +
 	"\aAddItem\x12\x14.cart.AddItemRequest\x1a\x15.cart.AddItemResponse\x126\n" +
 	"\aGetCart\x12\x14.cart.GetCartRequest\x1a\x15.cart.GetCartResponse\x122\n" +
-	"\tClearCart\x12\x16.cart.ClearCartRequest\x1a\r.common.EmptyB0Z.github.com/yourname/platform/shared/proto/cartb\x06proto3"
+	"\tClearCart\x12\x16.cart.ClearCartRequest\x1a\r.common.EmptyB)Z'kuoz/netshop/platform/shared/proto/cartb\x06proto3"
 
 var (
 	file_cart_proto_rawDescOnce sync.Once
@@ -419,34 +520,37 @@ func file_cart_proto_rawDescGZIP() []byte {
 	return file_cart_proto_rawDescData
 }
 
+var file_cart_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_cart_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_cart_proto_goTypes = []any{
-	(*AddItemRequest)(nil),   // 0: cart.AddItemRequest
-	(*AddItemResponse)(nil),  // 1: cart.AddItemResponse
-	(*GetCartRequest)(nil),   // 2: cart.GetCartRequest
-	(*GetCartResponse)(nil),  // 3: cart.GetCartResponse
-	(*ClearCartRequest)(nil), // 4: cart.ClearCartRequest
-	(*CartItem)(nil),         // 5: cart.CartItem
-	(*common.Money)(nil),     // 6: common.Money
-	(*common.Empty)(nil),     // 7: common.Empty
+	(StockStatus)(0),         // 0: cart.StockStatus
+	(*AddItemRequest)(nil),   // 1: cart.AddItemRequest
+	(*AddItemResponse)(nil),  // 2: cart.AddItemResponse
+	(*GetCartRequest)(nil),   // 3: cart.GetCartRequest
+	(*GetCartResponse)(nil),  // 4: cart.GetCartResponse
+	(*ClearCartRequest)(nil), // 5: cart.ClearCartRequest
+	(*CartItem)(nil),         // 6: cart.CartItem
+	(*common.Money)(nil),     // 7: common.Money
+	(*common.Empty)(nil),     // 8: common.Empty
 }
 var file_cart_proto_depIdxs = []int32{
-	5, // 0: cart.AddItemResponse.item:type_name -> cart.CartItem
-	5, // 1: cart.GetCartResponse.items:type_name -> cart.CartItem
-	6, // 2: cart.GetCartResponse.total_price:type_name -> common.Money
-	6, // 3: cart.CartItem.price:type_name -> common.Money
-	6, // 4: cart.CartItem.subtotal:type_name -> common.Money
-	0, // 5: cart.CartService.AddItem:input_type -> cart.AddItemRequest
-	2, // 6: cart.CartService.GetCart:input_type -> cart.GetCartRequest
-	4, // 7: cart.CartService.ClearCart:input_type -> cart.ClearCartRequest
-	1, // 8: cart.CartService.AddItem:output_type -> cart.AddItemResponse
-	3, // 9: cart.CartService.GetCart:output_type -> cart.GetCartResponse
-	7, // 10: cart.CartService.ClearCart:output_type -> common.Empty
-	8, // [8:11] is the sub-list for method output_type
-	5, // [5:8] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 0: cart.AddItemResponse.item:type_name -> cart.CartItem
+	6, // 1: cart.GetCartResponse.items:type_name -> cart.CartItem
+	7, // 2: cart.GetCartResponse.total_price:type_name -> common.Money
+	7, // 3: cart.CartItem.price:type_name -> common.Money
+	7, // 4: cart.CartItem.subtotal:type_name -> common.Money
+	0, // 5: cart.CartItem.stock_status:type_name -> cart.StockStatus
+	1, // 6: cart.CartService.AddItem:input_type -> cart.AddItemRequest
+	3, // 7: cart.CartService.GetCart:input_type -> cart.GetCartRequest
+	5, // 8: cart.CartService.ClearCart:input_type -> cart.ClearCartRequest
+	2, // 9: cart.CartService.AddItem:output_type -> cart.AddItemResponse
+	4, // 10: cart.CartService.GetCart:output_type -> cart.GetCartResponse
+	8, // 11: cart.CartService.ClearCart:output_type -> common.Empty
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_cart_proto_init() }
@@ -459,13 +563,14 @@ func file_cart_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cart_proto_rawDesc), len(file_cart_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_cart_proto_goTypes,
 		DependencyIndexes: file_cart_proto_depIdxs,
+		EnumInfos:         file_cart_proto_enumTypes,
 		MessageInfos:      file_cart_proto_msgTypes,
 	}.Build()
 	File_cart_proto = out.File

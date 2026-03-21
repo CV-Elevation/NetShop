@@ -1,6 +1,6 @@
 syntax = "proto3";
 package email;
-option go_package = "github.com/yourname/platform/shared/proto/email";
+option go_package = "kuoz/netshop/platform/shared/proto/email";
 
 import "common.proto";
 
@@ -28,42 +28,30 @@ message SendNotificationResponse {
 enum NotificationType {
   NOTIFICATION_TYPE_UNSPECIFIED    = 0;
   NOTIFICATION_TYPE_ORDER_PLACED   = 1; // 下单成功
-  NOTIFICATION_TYPE_ORDER_PAID     = 2; // 支付成功
-  NOTIFICATION_TYPE_ORDER_SHIPPED  = 3; // 已发货
-  NOTIFICATION_TYPE_ORDER_DELIVERED = 4; // 已收货
-  NOTIFICATION_TYPE_REFUND_SUCCESS = 5; // 退款成功
-  NOTIFICATION_TYPE_WELCOME        = 6; // 注册欢迎邮件
+  NOTIFICATION_TYPE_WELCOME        = 2; // 注册欢迎邮件
+  NOTIFICATION_TYPE_REFUND_PROCESSED = 3; // 退款完成
 }
 
 // 各类通知所需的数据（用 oneof 确保类型安全）
 message NotificationData {
   oneof payload {
     OrderNotification   order   = 1;
-    ShipmentNotification shipment = 2;
+    WelcomeNotification welcome = 2;
     RefundNotification  refund  = 3;
-    WelcomeNotification welcome = 4;
   }
 }
 
 message OrderNotification {
   string       order_id    = 1;
   common.Money total_price = 2;
-  int64        created_at  = 3;
+  int64        created_at  = 3; //Unix时间戳，单位秒
 }
-
-message ShipmentNotification {
-  string order_id         = 1;
-  string tracking_number  = 2; // 快递单号
-  string carrier          = 3; // 快递公司
+message WelcomeNotification {
+  string username = 1;
 }
-
 message RefundNotification {
   string       order_id   = 1;
   common.Money amount     = 2;
-}
-
-message WelcomeNotification {
-  string username = 1;
 }
 
 // ── GetNotificationStatus ─────────────────────

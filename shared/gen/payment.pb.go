@@ -7,9 +7,9 @@
 package payment
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -582,7 +582,7 @@ const file_payment_proto_rawDesc = "" +
 	"\rCreatePayment\x12\x1d.payment.CreatePaymentRequest\x1a\x1e.payment.CreatePaymentResponse\x12:\n" +
 	"\n" +
 	"GetPayment\x12\x1a.payment.GetPaymentRequest\x1a\x10.payment.Payment\x129\n" +
-	"\x06Refund\x12\x16.payment.RefundRequest\x1a\x17.payment.RefundResponseB3Z1github.com/yourname/platform/shared/proto/paymentb\x06proto3"
+	"\x06Refund\x12\x16.payment.RefundRequest\x1a\x17.payment.RefundResponseB,Z*kuoz/netshop/platform/shared/proto/paymentb\x06proto3"
 
 var (
 	file_payment_proto_rawDescOnce sync.Once

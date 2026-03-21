@@ -1,6 +1,6 @@
 syntax = "proto3";
 package checkout;
-option go_package = "github.com/yourname/platform/shared/proto/checkout";
+option go_package = "kuoz/netshop/platform/shared/proto/checkout";
 
 import "common.proto";
 
@@ -83,4 +83,5 @@ enum OrderStatus {
   ORDER_STATUS_DELIVERED   = 4; // 已收货
   ORDER_STATUS_CANCELLED   = 5; // 已取消
   ORDER_STATUS_REFUNDING   = 6; // 退款中
+  ORDER_STATUS_REFUNDED    = 7; // 已退款
 }

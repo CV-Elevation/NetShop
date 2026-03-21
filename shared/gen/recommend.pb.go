@@ -7,9 +7,9 @@
 package recommend
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -348,7 +348,7 @@ const file_recommend_proto_rawDesc = "" +
 	"\x11BEHAVIOR_PURCHASE\x10\x042\x9e\x01\n" +
 	"\x10RecommendService\x12O\n" +
 	"\x12GetRecommendations\x12\x1b.recommend.RecommendRequest\x1a\x1c.recommend.RecommendResponse\x129\n" +
-	"\x0eRecordBehavior\x12\x18.recommend.BehaviorEvent\x1a\r.common.EmptyB5Z3github.com/yourname/platform/shared/proto/recommendb\x06proto3"
+	"\x0eRecordBehavior\x12\x18.recommend.BehaviorEvent\x1a\r.common.EmptyB.Z,kuoz/netshop/platform/shared/proto/recommendb\x06proto3"
 
 var (
 	file_recommend_proto_rawDescOnce sync.Once

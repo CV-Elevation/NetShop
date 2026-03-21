@@ -1,6 +1,6 @@
 syntax = "proto3";
 package recommend;
-option go_package = "github.com/yourname/platform/shared/proto/recommend";
+option go_package = "kuoz/netshop/platform/shared/proto/recommend";
 
 import "common.proto";
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package cart;
-option go_package = "github.com/yourname/platform/shared/proto/cart";
+option go_package = "kuoz/netshop/platform/shared/proto/cart";
 
 import "common.proto";
 
@@ -33,9 +33,10 @@ message GetCartRequest {
 }
 
 message GetCartResponse {
-  string             user_id     = 1;
-  repeated CartItem  items       = 2;
-  common.Money       total_price = 3; // 所有商品合计
+  repeated CartItem  items       = 1;
+  common.Money       total_price = 2; // 所有商品合计
+  int32              total_count  = 3; // 购物车商品总数
+  bool               has_invalid  = 4; // 是否存在库存问题的商品（方便前端显示全局提示）
 }
 
 // ── ClearCart ─────────────────────────────────
@@ -44,11 +45,24 @@ message ClearCartRequest {
 }
 
 // ── 购物车条目 ─────────────────────────────────
+enum StockStatus {
+  STOCK_STATUS_UNKNOWN     = 0;
+  IN_STOCK                 = 1; // 库存充足
+  LOW_STOCK                = 2; // 库存紧张（比如 < 10件）
+  INSUFFICIENT             = 3; // 库存不足（少于用户选择的数量）
+  OUT_OF_STOCK             = 4; // 完全售罄
+}
+
 message CartItem {
-  string         product_id = 1;
-  string         name       = 2;
-  common.Money   price      = 3; // 单价
-  int32          quantity   = 4;
-  common.Money   subtotal   = 5; // 小计 = 单价 × 数量
-  string         image_url  = 6;
+  string       product_id   = 1;
+  string       name         = 2;
+  common.Money price        = 3;
+  int32        quantity     = 4;
+  common.Money subtotal     = 5;
+  string       image_url    = 6;
+
+  // 库存相关
+  StockStatus  stock_status = 7; // 库存状态
+  int32        stock_count  = 8; // 当前可用库存数量
+  bool         checked      = 9; // 是否勾选（用于部分结算）
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package aiassistant;
-option go_package = "github.com/yourname/platform/shared/proto/aiassistant";
+option go_package = "kuoz/netshop/platform/shared/proto/aiassistant";
 
 import "common.proto";
 

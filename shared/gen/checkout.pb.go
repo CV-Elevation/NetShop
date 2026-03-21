@@ -7,9 +7,9 @@
 package checkout
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -32,6 +32,7 @@ const (
 	OrderStatus_ORDER_STATUS_DELIVERED   OrderStatus = 4 // 已收货
 	OrderStatus_ORDER_STATUS_CANCELLED   OrderStatus = 5 // 已取消
 	OrderStatus_ORDER_STATUS_REFUNDING   OrderStatus = 6 // 退款中
+	OrderStatus_ORDER_STATUS_REFUNDED    OrderStatus = 7 // 已退款
 )
 
 // Enum value maps for OrderStatus.
@@ -44,6 +45,7 @@ var (
 		4: "ORDER_STATUS_DELIVERED",
 		5: "ORDER_STATUS_CANCELLED",
 		6: "ORDER_STATUS_REFUNDING",
+		7: "ORDER_STATUS_REFUNDED",
 	}
 	OrderStatus_value = map[string]int32{
 		"ORDER_STATUS_UNSPECIFIED": 0,
@@ -53,6 +55,7 @@ var (
 		"ORDER_STATUS_DELIVERED":   4,
 		"ORDER_STATUS_CANCELLED":   5,
 		"ORDER_STATUS_REFUNDING":   6,
+		"ORDER_STATUS_REFUNDED":    7,
 	}
 )
 
@@ -682,7 +685,7 @@ const file_checkout_proto_rawDesc = "" +
 	"\bprovince\x18\x03 \x01(\tR\bprovince\x12\x12\n" +
 	"\x04city\x18\x04 \x01(\tR\x04city\x12\x1a\n" +
 	"\bdistrict\x18\x05 \x01(\tR\bdistrict\x12\x16\n" +
-	"\x06detail\x18\x06 \x01(\tR\x06detail*\xca\x01\n" +
+	"\x06detail\x18\x06 \x01(\tR\x06detail*\xe5\x01\n" +
 	"\vOrderStatus\x12\x1c\n" +
 	"\x18ORDER_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14ORDER_STATUS_PENDING\x10\x01\x12\x15\n" +
@@ -690,13 +693,14 @@ const file_checkout_proto_rawDesc = "" +
 	"\x14ORDER_STATUS_SHIPPED\x10\x03\x12\x1a\n" +
 	"\x16ORDER_STATUS_DELIVERED\x10\x04\x12\x1a\n" +
 	"\x16ORDER_STATUS_CANCELLED\x10\x05\x12\x1a\n" +
-	"\x16ORDER_STATUS_REFUNDING\x10\x062\xdb\x01\n" +
+	"\x16ORDER_STATUS_REFUNDING\x10\x06\x12\x19\n" +
+	"\x15ORDER_STATUS_REFUNDED\x10\a2\xdb\x01\n" +
 	"\x0fCheckoutService\x12G\n" +
 	"\n" +
 	"PlaceOrder\x12\x1b.checkout.PlaceOrderRequest\x1a\x1c.checkout.PlaceOrderResponse\x126\n" +
 	"\bGetOrder\x12\x19.checkout.GetOrderRequest\x1a\x0f.checkout.Order\x12G\n" +
 	"\n" +
-	"ListOrders\x12\x1b.checkout.ListOrdersRequest\x1a\x1c.checkout.ListOrdersResponseB4Z2github.com/yourname/platform/shared/proto/checkoutb\x06proto3"
+	"ListOrders\x12\x1b.checkout.ListOrdersRequest\x1a\x1c.checkout.ListOrdersResponseB-Z+kuoz/netshop/platform/shared/proto/checkoutb\x06proto3"
 
 var (
 	file_checkout_proto_rawDescOnce sync.Once

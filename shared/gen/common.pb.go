@@ -296,7 +296,7 @@ const file_common_proto_rawDesc = "" +
 	"\x05stock\x18\a \x01(\x05R\x05stock\x12\x16\n" +
 	"\x06rating\x18\b \x01(\x02R\x06rating\x12\x1f\n" +
 	"\vsales_count\x18\t \x01(\x03R\n" +
-	"salesCountB2Z0github.com/yourname/platform/shared/proto/commonb\x06proto3"
+	"salesCountB+Z)kuoz/netshop/platform/shared/proto/commonb\x06proto3"
 
 var (
 	file_common_proto_rawDescOnce sync.Once

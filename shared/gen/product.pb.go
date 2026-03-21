@@ -7,9 +7,9 @@
 package product
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -322,7 +322,7 @@ const file_product_proto_rawDesc = "" +
 	"\n" +
 	"GetProduct\x12\x1a.product.GetProductRequest\x1a\x0f.common.Product\x12K\n" +
 	"\fListProducts\x12\x1c.product.ListProductsRequest\x1a\x1d.product.ListProductsResponse\x12Q\n" +
-	"\x0eSearchProducts\x12\x1e.product.SearchProductsRequest\x1a\x1f.product.SearchProductsResponseB3Z1github.com/yourname/platform/shared/proto/productb\x06proto3"
+	"\x0eSearchProducts\x12\x1e.product.SearchProductsRequest\x1a\x1f.product.SearchProductsResponseB,Z*kuoz/netshop/platform/shared/proto/productb\x06proto3"
 
 var (
 	file_product_proto_rawDescOnce sync.Once

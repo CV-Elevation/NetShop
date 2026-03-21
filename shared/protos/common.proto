@@ -1,6 +1,6 @@
 syntax = "proto3";
 package common;
-option go_package = "github.com/yourname/platform/shared/proto/common";
+option go_package = "kuoz/netshop/platform/shared/proto/common";
 
 // 通用空响应
 message Empty {}

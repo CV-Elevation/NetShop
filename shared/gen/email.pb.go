@@ -7,9 +7,9 @@
 package email
 
 import (
-	common "github.com/yourname/platform/shared/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	common "kuoz/netshop/platform/shared/proto/common"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -26,13 +26,10 @@ const (
 type NotificationType int32
 
 const (
-	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED     NotificationType = 0
-	NotificationType_NOTIFICATION_TYPE_ORDER_PLACED    NotificationType = 1 // 下单成功
-	NotificationType_NOTIFICATION_TYPE_ORDER_PAID      NotificationType = 2 // 支付成功
-	NotificationType_NOTIFICATION_TYPE_ORDER_SHIPPED   NotificationType = 3 // 已发货
-	NotificationType_NOTIFICATION_TYPE_ORDER_DELIVERED NotificationType = 4 // 已收货
-	NotificationType_NOTIFICATION_TYPE_REFUND_SUCCESS  NotificationType = 5 // 退款成功
-	NotificationType_NOTIFICATION_TYPE_WELCOME         NotificationType = 6 // 注册欢迎邮件
+	NotificationType_NOTIFICATION_TYPE_UNSPECIFIED      NotificationType = 0
+	NotificationType_NOTIFICATION_TYPE_ORDER_PLACED     NotificationType = 1 // 下单成功
+	NotificationType_NOTIFICATION_TYPE_WELCOME          NotificationType = 2 // 注册欢迎邮件
+	NotificationType_NOTIFICATION_TYPE_REFUND_PROCESSED NotificationType = 3 // 退款完成
 )
 
 // Enum value maps for NotificationType.
@@ -40,20 +37,14 @@ var (
 	NotificationType_name = map[int32]string{
 		0: "NOTIFICATION_TYPE_UNSPECIFIED",
 		1: "NOTIFICATION_TYPE_ORDER_PLACED",
-		2: "NOTIFICATION_TYPE_ORDER_PAID",
-		3: "NOTIFICATION_TYPE_ORDER_SHIPPED",
-		4: "NOTIFICATION_TYPE_ORDER_DELIVERED",
-		5: "NOTIFICATION_TYPE_REFUND_SUCCESS",
-		6: "NOTIFICATION_TYPE_WELCOME",
+		2: "NOTIFICATION_TYPE_WELCOME",
+		3: "NOTIFICATION_TYPE_REFUND_PROCESSED",
 	}
 	NotificationType_value = map[string]int32{
-		"NOTIFICATION_TYPE_UNSPECIFIED":     0,
-		"NOTIFICATION_TYPE_ORDER_PLACED":    1,
-		"NOTIFICATION_TYPE_ORDER_PAID":      2,
-		"NOTIFICATION_TYPE_ORDER_SHIPPED":   3,
-		"NOTIFICATION_TYPE_ORDER_DELIVERED": 4,
-		"NOTIFICATION_TYPE_REFUND_SUCCESS":  5,
-		"NOTIFICATION_TYPE_WELCOME":         6,
+		"NOTIFICATION_TYPE_UNSPECIFIED":      0,
+		"NOTIFICATION_TYPE_ORDER_PLACED":     1,
+		"NOTIFICATION_TYPE_WELCOME":          2,
+		"NOTIFICATION_TYPE_REFUND_PROCESSED": 3,
 	}
 )
 
@@ -255,9 +246,8 @@ type NotificationData struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*NotificationData_Order
-	//	*NotificationData_Shipment
-	//	*NotificationData_Refund
 	//	*NotificationData_Welcome
+	//	*NotificationData_Refund
 	Payload       isNotificationData_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -309,10 +299,10 @@ func (x *NotificationData) GetOrder() *OrderNotification {
 	return nil
 }
 
-func (x *NotificationData) GetShipment() *ShipmentNotification {
+func (x *NotificationData) GetWelcome() *WelcomeNotification {
 	if x != nil {
-		if x, ok := x.Payload.(*NotificationData_Shipment); ok {
-			return x.Shipment
+		if x, ok := x.Payload.(*NotificationData_Welcome); ok {
+			return x.Welcome
 		}
 	}
 	return nil
@@ -327,15 +317,6 @@ func (x *NotificationData) GetRefund() *RefundNotification {
 	return nil
 }
 
-func (x *NotificationData) GetWelcome() *WelcomeNotification {
-	if x != nil {
-		if x, ok := x.Payload.(*NotificationData_Welcome); ok {
-			return x.Welcome
-		}
-	}
-	return nil
-}
-
 type isNotificationData_Payload interface {
 	isNotificationData_Payload()
 }
@@ -344,31 +325,25 @@ type NotificationData_Order struct {
 	Order *OrderNotification `protobuf:"bytes,1,opt,name=order,proto3,oneof"`
 }
 
-type NotificationData_Shipment struct {
-	Shipment *ShipmentNotification `protobuf:"bytes,2,opt,name=shipment,proto3,oneof"`
+type NotificationData_Welcome struct {
+	Welcome *WelcomeNotification `protobuf:"bytes,2,opt,name=welcome,proto3,oneof"`
 }
 
 type NotificationData_Refund struct {
 	Refund *RefundNotification `protobuf:"bytes,3,opt,name=refund,proto3,oneof"`
 }
 
-type NotificationData_Welcome struct {
-	Welcome *WelcomeNotification `protobuf:"bytes,4,opt,name=welcome,proto3,oneof"`
-}
-
 func (*NotificationData_Order) isNotificationData_Payload() {}
 
-func (*NotificationData_Shipment) isNotificationData_Payload() {}
+func (*NotificationData_Welcome) isNotificationData_Payload() {}
 
 func (*NotificationData_Refund) isNotificationData_Payload() {}
-
-func (*NotificationData_Welcome) isNotificationData_Payload() {}
 
 type OrderNotification struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	TotalPrice    *common.Money          `protobuf:"bytes,2,opt,name=total_price,json=totalPrice,proto3" json:"total_price,omitempty"`
-	CreatedAt     int64                  `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` //Unix时间戳，单位秒
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -424,29 +399,27 @@ func (x *OrderNotification) GetCreatedAt() int64 {
 	return 0
 }
 
-type ShipmentNotification struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OrderId        string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	TrackingNumber string                 `protobuf:"bytes,2,opt,name=tracking_number,json=trackingNumber,proto3" json:"tracking_number,omitempty"` // 快递单号
-	Carrier        string                 `protobuf:"bytes,3,opt,name=carrier,proto3" json:"carrier,omitempty"`                                     // 快递公司
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type WelcomeNotification struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ShipmentNotification) Reset() {
-	*x = ShipmentNotification{}
+func (x *WelcomeNotification) Reset() {
+	*x = WelcomeNotification{}
 	mi := &file_email_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ShipmentNotification) String() string {
+func (x *WelcomeNotification) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ShipmentNotification) ProtoMessage() {}
+func (*WelcomeNotification) ProtoMessage() {}
 
-func (x *ShipmentNotification) ProtoReflect() protoreflect.Message {
+func (x *WelcomeNotification) ProtoReflect() protoreflect.Message {
 	mi := &file_email_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -458,28 +431,14 @@ func (x *ShipmentNotification) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ShipmentNotification.ProtoReflect.Descriptor instead.
-func (*ShipmentNotification) Descriptor() ([]byte, []int) {
+// Deprecated: Use WelcomeNotification.ProtoReflect.Descriptor instead.
+func (*WelcomeNotification) Descriptor() ([]byte, []int) {
 	return file_email_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ShipmentNotification) GetOrderId() string {
+func (x *WelcomeNotification) GetUsername() string {
 	if x != nil {
-		return x.OrderId
-	}
-	return ""
-}
-
-func (x *ShipmentNotification) GetTrackingNumber() string {
-	if x != nil {
-		return x.TrackingNumber
-	}
-	return ""
-}
-
-func (x *ShipmentNotification) GetCarrier() string {
-	if x != nil {
-		return x.Carrier
+		return x.Username
 	}
 	return ""
 }
@@ -536,50 +495,6 @@ func (x *RefundNotification) GetAmount() *common.Money {
 	return nil
 }
 
-type WelcomeNotification struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WelcomeNotification) Reset() {
-	*x = WelcomeNotification{}
-	mi := &file_email_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WelcomeNotification) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WelcomeNotification) ProtoMessage() {}
-
-func (x *WelcomeNotification) ProtoReflect() protoreflect.Message {
-	mi := &file_email_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WelcomeNotification.ProtoReflect.Descriptor instead.
-func (*WelcomeNotification) Descriptor() ([]byte, []int) {
-	return file_email_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *WelcomeNotification) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
 // ── GetNotificationStatus ─────────────────────
 type GetNotificationStatusRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -590,7 +505,7 @@ type GetNotificationStatusRequest struct {
 
 func (x *GetNotificationStatusRequest) Reset() {
 	*x = GetNotificationStatusRequest{}
-	mi := &file_email_proto_msgTypes[7]
+	mi := &file_email_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +517,7 @@ func (x *GetNotificationStatusRequest) String() string {
 func (*GetNotificationStatusRequest) ProtoMessage() {}
 
 func (x *GetNotificationStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_email_proto_msgTypes[7]
+	mi := &file_email_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +530,7 @@ func (x *GetNotificationStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNotificationStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetNotificationStatusRequest) Descriptor() ([]byte, []int) {
-	return file_email_proto_rawDescGZIP(), []int{7}
+	return file_email_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetNotificationStatusRequest) GetNotificationId() string {
@@ -637,7 +552,7 @@ type NotificationStatus struct {
 
 func (x *NotificationStatus) Reset() {
 	*x = NotificationStatus{}
-	mi := &file_email_proto_msgTypes[8]
+	mi := &file_email_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -649,7 +564,7 @@ func (x *NotificationStatus) String() string {
 func (*NotificationStatus) ProtoMessage() {}
 
 func (x *NotificationStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_email_proto_msgTypes[8]
+	mi := &file_email_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -662,7 +577,7 @@ func (x *NotificationStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NotificationStatus.ProtoReflect.Descriptor instead.
 func (*NotificationStatus) Descriptor() ([]byte, []int) {
-	return file_email_proto_rawDescGZIP(), []int{8}
+	return file_email_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *NotificationStatus) GetNotificationId() string {
@@ -704,43 +619,35 @@ const file_email_proto_rawDesc = "" +
 	"\x04type\x18\x03 \x01(\x0e2\x17.email.NotificationTypeR\x04type\x12+\n" +
 	"\x04data\x18\x04 \x01(\v2\x17.email.NotificationDataR\x04data\"C\n" +
 	"\x18SendNotificationResponse\x12'\n" +
-	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\xf7\x01\n" +
+	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\xbc\x01\n" +
 	"\x10NotificationData\x120\n" +
-	"\x05order\x18\x01 \x01(\v2\x18.email.OrderNotificationH\x00R\x05order\x129\n" +
-	"\bshipment\x18\x02 \x01(\v2\x1b.email.ShipmentNotificationH\x00R\bshipment\x123\n" +
-	"\x06refund\x18\x03 \x01(\v2\x19.email.RefundNotificationH\x00R\x06refund\x126\n" +
-	"\awelcome\x18\x04 \x01(\v2\x1a.email.WelcomeNotificationH\x00R\awelcomeB\t\n" +
+	"\x05order\x18\x01 \x01(\v2\x18.email.OrderNotificationH\x00R\x05order\x126\n" +
+	"\awelcome\x18\x02 \x01(\v2\x1a.email.WelcomeNotificationH\x00R\awelcome\x123\n" +
+	"\x06refund\x18\x03 \x01(\v2\x19.email.RefundNotificationH\x00R\x06refundB\t\n" +
 	"\apayload\"}\n" +
 	"\x11OrderNotification\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12.\n" +
 	"\vtotal_price\x18\x02 \x01(\v2\r.common.MoneyR\n" +
 	"totalPrice\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x03 \x01(\x03R\tcreatedAt\"t\n" +
-	"\x14ShipmentNotification\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\tR\aorderId\x12'\n" +
-	"\x0ftracking_number\x18\x02 \x01(\tR\x0etrackingNumber\x12\x18\n" +
-	"\acarrier\x18\x03 \x01(\tR\acarrier\"V\n" +
+	"created_at\x18\x03 \x01(\x03R\tcreatedAt\"1\n" +
+	"\x13WelcomeNotification\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\"V\n" +
 	"\x12RefundNotification\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12%\n" +
-	"\x06amount\x18\x02 \x01(\v2\r.common.MoneyR\x06amount\"1\n" +
-	"\x13WelcomeNotification\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\"G\n" +
+	"\x06amount\x18\x02 \x01(\v2\r.common.MoneyR\x06amount\"G\n" +
 	"\x1cGetNotificationStatusRequest\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\"\xaa\x01\n" +
 	"\x12NotificationStatus\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\x12-\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x15.email.DeliveryStatusR\x06status\x12\x17\n" +
 	"\asent_at\x18\x03 \x01(\x03R\x06sentAt\x12#\n" +
-	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage*\x8c\x02\n" +
+	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage*\xa0\x01\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12\"\n" +
-	"\x1eNOTIFICATION_TYPE_ORDER_PLACED\x10\x01\x12 \n" +
-	"\x1cNOTIFICATION_TYPE_ORDER_PAID\x10\x02\x12#\n" +
-	"\x1fNOTIFICATION_TYPE_ORDER_SHIPPED\x10\x03\x12%\n" +
-	"!NOTIFICATION_TYPE_ORDER_DELIVERED\x10\x04\x12$\n" +
-	" NOTIFICATION_TYPE_REFUND_SUCCESS\x10\x05\x12\x1d\n" +
-	"\x19NOTIFICATION_TYPE_WELCOME\x10\x06*\x84\x01\n" +
+	"\x1eNOTIFICATION_TYPE_ORDER_PLACED\x10\x01\x12\x1d\n" +
+	"\x19NOTIFICATION_TYPE_WELCOME\x10\x02\x12&\n" +
+	"\"NOTIFICATION_TYPE_REFUND_PROCESSED\x10\x03*\x84\x01\n" +
 	"\x0eDeliveryStatus\x12\x1f\n" +
 	"\x1bDELIVERY_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17DELIVERY_STATUS_PENDING\x10\x01\x12\x18\n" +
@@ -748,7 +655,7 @@ const file_email_proto_rawDesc = "" +
 	"\x16DELIVERY_STATUS_FAILED\x10\x032\xbc\x01\n" +
 	"\fEmailService\x12S\n" +
 	"\x10SendNotification\x12\x1e.email.SendNotificationRequest\x1a\x1f.email.SendNotificationResponse\x12W\n" +
-	"\x15GetNotificationStatus\x12#.email.GetNotificationStatusRequest\x1a\x19.email.NotificationStatusB1Z/github.com/yourname/platform/shared/proto/emailb\x06proto3"
+	"\x15GetNotificationStatus\x12#.email.GetNotificationStatusRequest\x1a\x19.email.NotificationStatusB*Z(kuoz/netshop/platform/shared/proto/emailb\x06proto3"
 
 var (
 	file_email_proto_rawDescOnce sync.Once
@@ -763,7 +670,7 @@ func file_email_proto_rawDescGZIP() []byte {
 }
 
 var file_email_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_email_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_email_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_email_proto_goTypes = []any{
 	(NotificationType)(0),                // 0: email.NotificationType
 	(DeliveryStatus)(0),                  // 1: email.DeliveryStatus
@@ -771,32 +678,30 @@ var file_email_proto_goTypes = []any{
 	(*SendNotificationResponse)(nil),     // 3: email.SendNotificationResponse
 	(*NotificationData)(nil),             // 4: email.NotificationData
 	(*OrderNotification)(nil),            // 5: email.OrderNotification
-	(*ShipmentNotification)(nil),         // 6: email.ShipmentNotification
+	(*WelcomeNotification)(nil),          // 6: email.WelcomeNotification
 	(*RefundNotification)(nil),           // 7: email.RefundNotification
-	(*WelcomeNotification)(nil),          // 8: email.WelcomeNotification
-	(*GetNotificationStatusRequest)(nil), // 9: email.GetNotificationStatusRequest
-	(*NotificationStatus)(nil),           // 10: email.NotificationStatus
-	(*common.Money)(nil),                 // 11: common.Money
+	(*GetNotificationStatusRequest)(nil), // 8: email.GetNotificationStatusRequest
+	(*NotificationStatus)(nil),           // 9: email.NotificationStatus
+	(*common.Money)(nil),                 // 10: common.Money
 }
 var file_email_proto_depIdxs = []int32{
 	0,  // 0: email.SendNotificationRequest.type:type_name -> email.NotificationType
 	4,  // 1: email.SendNotificationRequest.data:type_name -> email.NotificationData
 	5,  // 2: email.NotificationData.order:type_name -> email.OrderNotification
-	6,  // 3: email.NotificationData.shipment:type_name -> email.ShipmentNotification
+	6,  // 3: email.NotificationData.welcome:type_name -> email.WelcomeNotification
 	7,  // 4: email.NotificationData.refund:type_name -> email.RefundNotification
-	8,  // 5: email.NotificationData.welcome:type_name -> email.WelcomeNotification
-	11, // 6: email.OrderNotification.total_price:type_name -> common.Money
-	11, // 7: email.RefundNotification.amount:type_name -> common.Money
-	1,  // 8: email.NotificationStatus.status:type_name -> email.DeliveryStatus
-	2,  // 9: email.EmailService.SendNotification:input_type -> email.SendNotificationRequest
-	9,  // 10: email.EmailService.GetNotificationStatus:input_type -> email.GetNotificationStatusRequest
-	3,  // 11: email.EmailService.SendNotification:output_type -> email.SendNotificationResponse
-	10, // 12: email.EmailService.GetNotificationStatus:output_type -> email.NotificationStatus
-	11, // [11:13] is the sub-list for method output_type
-	9,  // [9:11] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	10, // 5: email.OrderNotification.total_price:type_name -> common.Money
+	10, // 6: email.RefundNotification.amount:type_name -> common.Money
+	1,  // 7: email.NotificationStatus.status:type_name -> email.DeliveryStatus
+	2,  // 8: email.EmailService.SendNotification:input_type -> email.SendNotificationRequest
+	8,  // 9: email.EmailService.GetNotificationStatus:input_type -> email.GetNotificationStatusRequest
+	3,  // 10: email.EmailService.SendNotification:output_type -> email.SendNotificationResponse
+	9,  // 11: email.EmailService.GetNotificationStatus:output_type -> email.NotificationStatus
+	10, // [10:12] is the sub-list for method output_type
+	8,  // [8:10] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_email_proto_init() }
@@ -806,9 +711,8 @@ func file_email_proto_init() {
 	}
 	file_email_proto_msgTypes[2].OneofWrappers = []any{
 		(*NotificationData_Order)(nil),
-		(*NotificationData_Shipment)(nil),
-		(*NotificationData_Refund)(nil),
 		(*NotificationData_Welcome)(nil),
+		(*NotificationData_Refund)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -816,7 +720,7 @@ func file_email_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_email_proto_rawDesc), len(file_email_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   9,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
