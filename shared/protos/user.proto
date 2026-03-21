@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "kuoz/netshop/platform/shared/proto/user";
+
+service UserService {
+  // 使用第三方登录（如 Google、微信、GitHub）进行登录或注册
+  rpc LoginOrRegister(LoginOrRegisterRequest) returns (LoginOrRegisterResponse);
+  // 获取用户信息
+  rpc GetUser(GetUserRequest)                 returns (GetUserResponse);
+  // 更新用户信息（昵称、头像、邮箱等）
+  rpc UpdateUser(UpdateUserRequest)           returns (UpdateUserResponse);
+}
+
+message LoginOrRegisterRequest {
+  string provider = 1; // "google" / "wechat" / "github"
+  string openid   = 2; // 第三方唯一 ID
+  string nickname = 3;
+  string avatar   = 4;
+  string email    = 5; // Google 会提供，其他 provider 可为空
+}
+
+message LoginOrRegisterResponse {
+  string user_id = 1;
+  bool   is_new  = 2;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  string user_id  = 1;
+  string nickname = 2;
+  string avatar   = 3;
+  string email    = 4;
+}
+
+message UpdateUserRequest {
+  string user_id  = 1;
+  string nickname = 2;
+  string avatar   = 3;
+  string email    = 4;
+}
+
+message UpdateUserResponse {
+  bool ok = 1;
+}
