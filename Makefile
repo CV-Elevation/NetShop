@@ -1,4 +1,4 @@
-.PHONY: proto proto-install init 
+.PHONY: proto proto-install init gen-dirs
 
 PROTO_DIR := shared/protos
 OUT_DIR   := shared/gen
@@ -84,3 +84,12 @@ init:
 	done
 
 	@echo "✅ 目录结构初始化完成！"
+
+# 在 shared/gen 下按 proto 文件名创建空目录
+gen-dirs:
+    @mkdir -p $(OUT_DIR)
+    @for f in $(PROTO_DIR)/*.proto; do \
+        name=$$(basename $$f .proto); \
+        mkdir -p $(OUT_DIR)/$$name; \
+    done
+    @echo "Created dirs in $(OUT_DIR) from $(PROTO_DIR)/*.proto"

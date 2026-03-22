@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetShop Gateway Login</title>
+  <style>
+    :root {
+      --bg: #f7f4ea;
+      --card: #fffdf8;
+      --ink: #1f1a13;
+      --accent: #b35620;
+      --accent-dark: #7f3814;
+      --muted: #6d6257;
+      --ring: rgba(179, 86, 32, 0.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 15%, #f6dd9d 0%, transparent 35%),
+        radial-gradient(circle at 85% 80%, #d1b687 0%, transparent 40%),
+        var(--bg);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .card {
+      width: min(520px, 100%);
+      background: var(--card);
+      border: 1px solid #e8dcc7;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(31, 26, 19, 0.12);
+      padding: 32px 28px;
+      animation: rise 500ms ease;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+      letter-spacing: 0.02em;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .message {
+      margin-top: 18px;
+      background: #fff3d8;
+      border: 1px solid #f0cf8f;
+      color: #7f3814;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      padding: 12px 20px;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      box-shadow: 0 8px 22px var(--ring);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px var(--ring); }
+    .hint {
+      margin-top: 24px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>NetShop Gateway Login</h1>
+    <p>This gateway renders pages and handles GitHub OAuth + JWT authentication.</p>
+    {{if .Message}}
+      <div class="message">{{.Message}}</div>
+    {{end}}
+    <div class="actions">
+      <a class="btn" href="{{.GitHubLoginURL}}">Continue with GitHub</a>
+    </div>
+    <p class="hint">First login validates against GitHub, creates user in UserService, and sends welcome email.</p>
+  </main>
+</body>
+</html>
