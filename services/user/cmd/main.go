@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -8,30 +9,48 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"netshop/services/user/internal/handler"
 	"netshop/services/user/internal/repository"
 	"netshop/services/user/internal/service"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 )
 
 func main() {
+	// ── 数据库连接 ────────────────────────────────────────────
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://netshop:secret@localhost:5432/netshop?sslmode=disable"
+	}
+	pool, err := pgxpool.New(context.Background(), dsn)
+	if err != nil {
+		log.Fatalf("connect db failed: %v", err)
+	}
+	defer pool.Close()
+
+	// 验证连接是否正常
+	if err := pool.Ping(context.Background()); err != nil {
+		log.Fatalf("ping db failed: %v", err)
+	}
+	log.Println("database connected")
+
+	// ── 服务初始化 ────────────────────────────────────────────
 	addr := os.Getenv("USER_GRPC_ADDR")
 	if addr == "" {
 		addr = ":50051"
 	}
-
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}
-	//存在内存里，开发阶段快速验证
-	repo := repository.NewMemoryRepository()
-	userSvc := service.NewUserService(repo)
 
+	repo := repository.NewPostgresRepository(pool) // 传入连接池
+	userSvc := service.NewUserService(repo)
 	grpcServer := grpc.NewServer()
 	handler.Register(grpcServer, userSvc)
 
+	// ── 启动 & 优雅退出 ───────────────────────────────────────
 	go func() {
 		log.Printf("user grpc service listening at %s", addr)
 		if err := grpcServer.Serve(lis); err != nil {
@@ -54,6 +73,5 @@ func main() {
 	case <-time.After(10 * time.Second):
 		grpcServer.Stop()
 	}
-
 	log.Println("user grpc service stopped")
 }

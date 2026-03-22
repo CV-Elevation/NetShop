@@ -35,15 +35,15 @@ func (s *NotificationService) SendNotification(_ context.Context, req *emailpb.S
 	}
 
 	notificationID := fmt.Sprintf("noti_%d", atomic.AddUint64(&s.idCounter, 1))
-	s.repo.Save(repository.Notification{
-		ID:     notificationID,
-		UserID: req.GetUserId(),
-		Email:  req.GetEmail(),
-		Type:   req.GetType(),
-		Data:   req.GetData(),
-		Status: emailpb.DeliveryStatus_DELIVERY_STATUS_PENDING,
-	})
-
+	// s.repo.Save(repository.Notification{
+	// 	ID:     notificationID,
+	// 	UserID: req.GetUserId(),
+	// 	Email:  req.GetEmail(),
+	// 	Type:   req.GetType(),
+	// 	Data:   req.GetData(),
+	// 	Status: emailpb.DeliveryStatus_DELIVERY_STATUS_PENDING,
+	// })
+	//异步发送
 	go s.process(notificationID, req)
 	return notificationID, nil
 }
@@ -70,7 +70,7 @@ func (s *NotificationService) process(notificationID string, req *emailpb.SendNo
 	time.Sleep(120 * time.Millisecond)
 
 	log.Printf("send notification id=%s type=%s to=%s user_id=%s", notificationID, req.GetType().String(), req.GetEmail(), req.GetUserId())
-	s.repo.UpdateStatus(notificationID, emailpb.DeliveryStatus_DELIVERY_STATUS_SENT, time.Now().Unix(), "")
+	// s.repo.UpdateStatus(notificationID, emailpb.DeliveryStatus_DELIVERY_STATUS_SENT, time.Now().Unix(), "")
 }
 
 func validatePayload(req *emailpb.SendNotificationRequest) error {
