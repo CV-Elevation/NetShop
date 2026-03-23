@@ -21,8 +21,11 @@ type Config struct {
 	RefreshTTL   time.Duration
 	CookieSecure bool
 
-	UserServiceAddr  string
-	EmailServiceAddr string
+	UserServiceAddr      string
+	EmailServiceAddr     string
+	ProductServiceAddr   string
+	AdServiceAddr        string
+	RecommendServiceAddr string
 }
 
 func Load() Config {
@@ -45,8 +48,11 @@ func Load() Config {
 		//表示是否强制在https环境下发送
 		CookieSecure: getEnvBool("COOKIE_SECURE", false),
 		//后方服务grpc地址
-		UserServiceAddr:  getEnv("USER_SERVICE_ADDR", "localhost:50051"),
-		EmailServiceAddr: getEnv("EMAIL_SERVICE_ADDR", "localhost:50052"),
+		UserServiceAddr:      getEnv("USER_SERVICE_ADDR", "localhost:50051"),
+		EmailServiceAddr:     getEnv("EMAIL_SERVICE_ADDR", "localhost:50052"),
+		ProductServiceAddr:   getEnv("PRODUCT_SERVICE_ADDR", "localhost:50053"),
+		AdServiceAddr:        getEnv("AD_SERVICE_ADDR", "localhost:50055"),
+		RecommendServiceAddr: getEnv("RECOMMEND_SERVICE_ADDR", "localhost:50054"),
 	}
 }
 
