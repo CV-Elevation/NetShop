@@ -5,28 +5,41 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
+	"sync"
 	"time"
 
+	adpb "kuoz/netshop/platform/shared/proto/ad"
+	commonpb "kuoz/netshop/platform/shared/proto/common"
+	recommendpb "kuoz/netshop/platform/shared/proto/recommend"
 	"netshop/services/frontend/internal/client"
 	"netshop/services/frontend/internal/config"
 	"netshop/services/frontend/internal/middleware"
 	"netshop/services/frontend/internal/oauth"
 	view "netshop/services/frontend/internal/template"
 	"netshop/services/frontend/internal/token"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const oauthStateCookie = "oauth_state"
 
 type WebHandler struct {
-	cfg         config.Config
-	tmpl        *template.Template
-	oauthClient *oauth.GitHubClient
-	tokens      *token.Manager
-	userClient  *client.UserServiceClient
-	emailClient *client.EmailServiceClient
+	cfg             config.Config
+	tmpl            *template.Template
+	oauthClient     *oauth.GitHubClient
+	tokens          *token.Manager
+	userClient      *client.UserServiceClient
+	emailClient     *client.EmailServiceClient
+	productClient   *client.ProductServiceClient
+	adClient        *client.AdServiceClient
+	recommendClient *client.RecommendServiceClient
 }
 
 type loginPageData struct {
@@ -38,6 +51,36 @@ type homePageData struct {
 	Nickname string
 	Email    string
 	UserID   string
+
+	Products          []productCard
+	Recommendations   []productCard
+	Ads               []adCard
+	RecommendStrategy string
+	Warnings          []string
+}
+
+type productCard struct {
+	Name        string
+	Description string
+	Category    string
+	Stock       int32
+	Price       string
+	ImageURL    string
+	Rating      float32
+	DetailURL   string
+}
+
+type productDetailPageData struct {
+	Nickname string
+	UserID   string
+	Product  productCard
+}
+
+type adCard struct {
+	ID        string
+	Title     string
+	ImageURL  string
+	TargetURL string
 }
 
 func NewWebHandler(
@@ -46,6 +89,9 @@ func NewWebHandler(
 	tokens *token.Manager,
 	userClient *client.UserServiceClient,
 	emailClient *client.EmailServiceClient,
+	productClient *client.ProductServiceClient,
+	adClient *client.AdServiceClient,
+	recommendClient *client.RecommendServiceClient,
 ) (*WebHandler, error) {
 	tmpl, err := view.Parse()
 	if err != nil {
@@ -53,12 +99,15 @@ func NewWebHandler(
 	}
 
 	return &WebHandler{
-		cfg:         cfg,
-		tmpl:        tmpl,
-		oauthClient: oauthClient,
-		tokens:      tokens,
-		userClient:  userClient,
-		emailClient: emailClient,
+		cfg:             cfg,
+		tmpl:            tmpl,
+		oauthClient:     oauthClient,
+		tokens:          tokens,
+		userClient:      userClient,
+		emailClient:     emailClient,
+		productClient:   productClient,
+		adClient:        adClient,
+		recommendClient: recommendClient,
 	}, nil
 }
 
@@ -68,6 +117,7 @@ func (h *WebHandler) Register(mux *http.ServeMux, authMiddleware *middleware.Aut
 	mux.HandleFunc("/auth/github/login", h.githubLogin)
 	mux.HandleFunc("/auth/github/callback", h.githubCallback)
 	//这里是把内层的裸函数进行了包装，包装上了登录拦截的逻辑
+	mux.Handle("/products/", authMiddleware.RequireAuth(http.HandlerFunc(h.productDetailPage)))
 	mux.Handle("/", authMiddleware.RequireAuth(http.HandlerFunc(h.homePage)))
 	mux.Handle("/logout", authMiddleware.RequireAuth(http.HandlerFunc(h.logout)))
 }
@@ -199,18 +249,183 @@ func (h *WebHandler) githubCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebHandler) homePage(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
 	user, ok := middleware.UserFromContext(r.Context())
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "home.html", homePageData{
+
+	data := homePageData{
 		Nickname: user.Nickname,
 		Email:    user.Email,
 		UserID:   user.UserID,
-	}); err != nil {
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var (
+		mu sync.Mutex
+		wg sync.WaitGroup
+	)
+
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		resp, err := h.recommendClient.GetRecommendations(ctx, client.GetRecommendationsRequest{
+			UserID: user.UserID,
+			Scene:  recommendpb.Scene_SCENE_HOMEPAGE,
+			Limit:  6,
+		})
+		mu.Lock()
+		defer mu.Unlock()
+		if err != nil {
+			log.Printf("recommend service failed: %v", err)
+			data.Warnings = append(data.Warnings, "推荐服务暂时不可用，已降级展示")
+			return
+		}
+		data.RecommendStrategy = resp.Strategy
+		data.Recommendations = mapProducts(resp.Items)
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp, err := h.productClient.ListProducts(ctx, client.ListProductsRequest{
+			Category: "",
+			Page:     1,
+			PageSize: 8,
+		})
+		mu.Lock()
+		defer mu.Unlock()
+		if err != nil {
+			log.Printf("product service failed: %v", err)
+			data.Warnings = append(data.Warnings, "商品服务暂时不可用，商品列表为空")
+			return
+		}
+		data.Products = mapProducts(resp.Items)
+	}()
+
+	go func() {
+		defer wg.Done()
+		items, err := h.adClient.GetAds(ctx, client.GetAdsRequest{
+			UserID: user.UserID,
+			Slot:   adpb.AdSlot_AD_SLOT_BANNER,
+			Limit:  2,
+		})
+		mu.Lock()
+		defer mu.Unlock()
+		if err != nil {
+			log.Printf("ad service failed: %v", err)
+			data.Warnings = append(data.Warnings, "广告服务暂时不可用")
+			return
+		}
+		data.Ads = mapAds(items)
+	}()
+
+	wg.Wait()
+
+	if err := h.tmpl.ExecuteTemplate(w, "home.html", data); err != nil {
 		http.Error(w, "render home failed", http.StatusInternalServerError)
 	}
+}
+
+func (h *WebHandler) productDetailPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := middleware.UserFromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	productID := strings.TrimPrefix(r.URL.Path, "/products/")
+	productID, err := url.PathUnescape(productID)
+	if err != nil || productID == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	product, err := h.productClient.GetProduct(ctx, client.GetProductRequest{ID: productID})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("product detail fetch failed: %v", err)
+		http.Error(w, "load product failed", http.StatusBadGateway)
+		return
+	}
+
+	data := productDetailPageData{
+		Nickname: user.Nickname,
+		UserID:   user.UserID,
+		Product:  mapOneProduct(product),
+	}
+
+	if err := h.tmpl.ExecuteTemplate(w, "product_detail.html", data); err != nil {
+		http.Error(w, "render product detail failed", http.StatusInternalServerError)
+	}
+}
+
+func mapProducts(items []*commonpb.Product) []productCard {
+	result := make([]productCard, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		result = append(result, mapOneProduct(item))
+	}
+	return result
+}
+
+func mapOneProduct(item *commonpb.Product) productCard {
+	if item == nil {
+		return productCard{}
+	}
+	return productCard{
+		Name:        item.GetName(),
+		Description: item.GetDescription(),
+		Category:    item.GetCategory(),
+		Stock:       item.GetStock(),
+		Price:       formatPrice(item.GetPrice().GetAmount(), item.GetPrice().GetCurrency()),
+		ImageURL:    item.GetImageUrl(),
+		Rating:      item.GetRating(),
+		DetailURL:   "/products/" + url.PathEscape(item.GetId()),
+	}
+}
+
+func mapAds(items []*adpb.Ad) []adCard {
+	result := make([]adCard, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		result = append(result, adCard{
+			ID:        item.GetId(),
+			Title:     item.GetTitle(),
+			ImageURL:  item.GetImageUrl(),
+			TargetURL: item.GetTargetUrl(),
+		})
+	}
+	return result
+}
+
+func formatPrice(amount int64, currency string) string {
+	if currency == "" {
+		currency = "CNY"
+	}
+	return fmt.Sprintf("%s %.2f", currency, float64(amount)/100)
 }
 
 func (h *WebHandler) logout(w http.ResponseWriter, r *http.Request) {
