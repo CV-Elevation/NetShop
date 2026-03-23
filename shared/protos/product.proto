@@ -34,9 +34,10 @@ message ListProductsResponse {
 // ── SearchProducts ────────────────────────────
 message SearchProductsRequest {
   string            keyword    = 1; // 自然语言关键词
-  int64             max_price  = 2; // 最高价格（分），0 表示不限
-  string            category   = 3; // 空表示不限
-  common.Pagination pagination = 4;
+  int64             max_price  = 2; // 最高价格（分），0 表示 不限
+  int64             min_price  = 3;
+  string            category   = 4; // 空表示不限
+  common.Pagination pagination = 5;
 }
 
 message SearchProductsResponse {
