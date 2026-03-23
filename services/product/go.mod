@@ -22,5 +22,4 @@ require (
 )
 
 replace kuoz/netshop/platform/shared/proto/product => ../../shared/gen/product
-
 replace kuoz/netshop/platform/shared/proto/common => ../../shared/gen/common
