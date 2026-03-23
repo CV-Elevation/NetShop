@@ -6,9 +6,9 @@
 -- 开启 pgvector 扩展
 CREATE EXTENSION IF NOT EXISTS vector;
 -- 创建命名空间
+
 -- CREATE SCHEMA IF NOT EXISTS product;
 CREATE SCHEMA IF NOT EXISTS users;
-
 
 -- ── users.accounts ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users.accounts (
@@ -34,3 +34,27 @@ CREATE TABLE IF NOT EXISTS users.oauth (
 CREATE INDEX IF NOT EXISTS idx_oauth_user_id       ON users.oauth(user_id);
 CREATE INDEX IF NOT EXISTS idx_oauth_provider_uid  ON users.oauth(provider, provider_uid);
  
+
+-- Products 表初始化
+CREATE SCHEMA IF NOT EXISTS products;
+
+-- ── products.items ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS products.items (
+    id           UUID          PRIMARY KEY,
+    name         VARCHAR(255)  NOT NULL,
+    description  TEXT          NOT NULL DEFAULT '',
+    price_fen    BIGINT        NOT NULL DEFAULT 0,              -- 单位：分
+    currency     VARCHAR(10)   NOT NULL DEFAULT 'CNY',
+    category     VARCHAR(100)  NOT NULL DEFAULT '',
+    image_url    TEXT          NOT NULL DEFAULT '',
+    stock        INT           NOT NULL DEFAULT 0,
+    rating       REAL          NOT NULL DEFAULT 0,
+    sales_count  BIGINT        NOT NULL DEFAULT 0,
+    created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- ── 索引 ────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_products_category    ON products.items(category);
+CREATE INDEX IF NOT EXISTS idx_products_price_fen   ON products.items(price_fen);
+CREATE INDEX IF NOT EXISTS idx_products_sales_count ON products.items(sales_count DESC);

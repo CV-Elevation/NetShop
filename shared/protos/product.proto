@@ -3,7 +3,7 @@ package product;
 option go_package = "kuoz/netshop/platform/shared/proto/product";
 
 import "common.proto";
-
+// 实现商品相关服务
 service ProductService {
   // 按 ID 查询单个商品
   rpc GetProduct(GetProductRequest) returns (common.Product);
