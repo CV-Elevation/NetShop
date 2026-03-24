@@ -22,19 +22,71 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ── Chat / ChatStream 共用请求 ─────────────────
+type Message struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"` // "user" / "assistant"
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Message) Reset() {
+	*x = Message{}
+	mi := &file_aiassistant_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Message) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Message) ProtoMessage() {}
+
+func (x *Message) ProtoReflect() protoreflect.Message {
+	mi := &file_aiassistant_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Message.ProtoReflect.Descriptor instead.
+func (*Message) Descriptor() ([]byte, []int) {
+	return file_aiassistant_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Message) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *Message) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
 type ChatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"` // 会话 ID，用于关联上下文，前端生成 UUID
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"` // 用户输入
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	History       []*Message             `protobuf:"bytes,4,rep,name=history,proto3" json:"history,omitempty"` // 最近 N 条上下文
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatRequest) Reset() {
 	*x = ChatRequest{}
-	mi := &file_aiassistant_proto_msgTypes[0]
+	mi := &file_aiassistant_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +98,7 @@ func (x *ChatRequest) String() string {
 func (*ChatRequest) ProtoMessage() {}
 
 func (x *ChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_aiassistant_proto_msgTypes[0]
+	mi := &file_aiassistant_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +111,7 @@ func (x *ChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatRequest.ProtoReflect.Descriptor instead.
 func (*ChatRequest) Descriptor() ([]byte, []int) {
-	return file_aiassistant_proto_rawDescGZIP(), []int{0}
+	return file_aiassistant_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ChatRequest) GetSessionId() string {
@@ -83,19 +135,25 @@ func (x *ChatRequest) GetMessage() string {
 	return ""
 }
 
-// ── Chat 普通响应 ──────────────────────────────
+func (x *ChatRequest) GetHistory() []*Message {
+	if x != nil {
+		return x.History
+	}
+	return nil
+}
+
 type ChatResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`                            // AI 回复文本
-	ToolCalls     []*ToolCall            `protobuf:"bytes,2,rep,name=tool_calls,json=toolCalls,proto3" json:"tool_calls,omitempty"` // 本次调用了哪些工具（透传给前端展示）
-	Products      []*common.Product      `protobuf:"bytes,3,rep,name=products,proto3" json:"products,omitempty"`                    // 如果涉及商品推荐，直接返回商品列表
+	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	ToolCalls     []*ToolCall            `protobuf:"bytes,2,rep,name=tool_calls,json=toolCalls,proto3" json:"tool_calls,omitempty"`
+	Products      []*common.Product      `protobuf:"bytes,3,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatResponse) Reset() {
 	*x = ChatResponse{}
-	mi := &file_aiassistant_proto_msgTypes[1]
+	mi := &file_aiassistant_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -107,7 +165,7 @@ func (x *ChatResponse) String() string {
 func (*ChatResponse) ProtoMessage() {}
 
 func (x *ChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_aiassistant_proto_msgTypes[1]
+	mi := &file_aiassistant_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -120,7 +178,7 @@ func (x *ChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatResponse.ProtoReflect.Descriptor instead.
 func (*ChatResponse) Descriptor() ([]byte, []int) {
-	return file_aiassistant_proto_rawDescGZIP(), []int{1}
+	return file_aiassistant_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ChatResponse) GetText() string {
@@ -144,20 +202,20 @@ func (x *ChatResponse) GetProducts() []*common.Product {
 	return nil
 }
 
-// ── ChatStream 流式响应（逐 chunk 返回）─────────
 type ChatChunk struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Delta string                 `protobuf:"bytes,1,opt,name=delta,proto3" json:"delta,omitempty"` // 增量文本片段
-	Done  bool                   `protobuf:"varint,2,opt,name=done,proto3" json:"done,omitempty"`  // 是否结束
-	// 最后一个 chunk（done=true）时携带完整商品列表
-	Products      []*common.Product `protobuf:"bytes,3,rep,name=products,proto3" json:"products,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkType     string                 `protobuf:"bytes,1,opt,name=chunk_type,json=chunkType,proto3" json:"chunk_type,omitempty"` // "text" / "tool_status" / "products" / "done"
+	Delta         string                 `protobuf:"bytes,2,opt,name=delta,proto3" json:"delta,omitempty"`
+	Done          bool                   `protobuf:"varint,3,opt,name=done,proto3" json:"done,omitempty"`
+	ToolCall      *ToolCall              `protobuf:"bytes,4,opt,name=tool_call,json=toolCall,proto3" json:"tool_call,omitempty"` // 工具执行状态推送
+	Products      []*common.Product      `protobuf:"bytes,5,rep,name=products,proto3" json:"products,omitempty"`                 // chunk_type="products" 时携带
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatChunk) Reset() {
 	*x = ChatChunk{}
-	mi := &file_aiassistant_proto_msgTypes[2]
+	mi := &file_aiassistant_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -169,7 +227,7 @@ func (x *ChatChunk) String() string {
 func (*ChatChunk) ProtoMessage() {}
 
 func (x *ChatChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_aiassistant_proto_msgTypes[2]
+	mi := &file_aiassistant_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -182,7 +240,14 @@ func (x *ChatChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatChunk.ProtoReflect.Descriptor instead.
 func (*ChatChunk) Descriptor() ([]byte, []int) {
-	return file_aiassistant_proto_rawDescGZIP(), []int{2}
+	return file_aiassistant_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ChatChunk) GetChunkType() string {
+	if x != nil {
+		return x.ChunkType
+	}
+	return ""
 }
 
 func (x *ChatChunk) GetDelta() string {
@@ -199,6 +264,13 @@ func (x *ChatChunk) GetDone() bool {
 	return false
 }
 
+func (x *ChatChunk) GetToolCall() *ToolCall {
+	if x != nil {
+		return x.ToolCall
+	}
+	return nil
+}
+
 func (x *ChatChunk) GetProducts() []*common.Product {
 	if x != nil {
 		return x.Products
@@ -206,18 +278,18 @@ func (x *ChatChunk) GetProducts() []*common.Product {
 	return nil
 }
 
-// ── 工具调用记录（透明给前端） ─────────────────
 type ToolCall struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ToolName      string                 `protobuf:"bytes,1,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"` // "search_products" / "get_order" / "query_faq"
-	Summary       string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`                   // 工具执行结果摘要，用于前端展示"正在查询..."
+	ToolName      string                 `protobuf:"bytes,1,opt,name=tool_name,json=toolName,proto3" json:"tool_name,omitempty"` // "search_products" / "query_faq"
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`                     // "running" / "done" / "error"
+	Summary       string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`                   // 执行结果摘要
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ToolCall) Reset() {
 	*x = ToolCall{}
-	mi := &file_aiassistant_proto_msgTypes[3]
+	mi := &file_aiassistant_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -229,7 +301,7 @@ func (x *ToolCall) String() string {
 func (*ToolCall) ProtoMessage() {}
 
 func (x *ToolCall) ProtoReflect() protoreflect.Message {
-	mi := &file_aiassistant_proto_msgTypes[3]
+	mi := &file_aiassistant_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -242,12 +314,19 @@ func (x *ToolCall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolCall.ProtoReflect.Descriptor instead.
 func (*ToolCall) Descriptor() ([]byte, []int) {
-	return file_aiassistant_proto_rawDescGZIP(), []int{3}
+	return file_aiassistant_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ToolCall) GetToolName() string {
 	if x != nil {
 		return x.ToolName
+	}
+	return ""
+}
+
+func (x *ToolCall) GetStatus() string {
+	if x != nil {
+		return x.Status
 	}
 	return ""
 }
@@ -263,24 +342,32 @@ var File_aiassistant_proto protoreflect.FileDescriptor
 
 const file_aiassistant_proto_rawDesc = "" +
 	"\n" +
-	"\x11aiassistant.proto\x12\vaiassistant\x1a\fcommon.proto\"_\n" +
+	"\x11aiassistant.proto\x12\vaiassistant\x1a\fcommon.proto\"7\n" +
+	"\aMessage\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\"\x8f\x01\n" +
 	"\vChatRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"\x85\x01\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12.\n" +
+	"\ahistory\x18\x04 \x03(\v2\x14.aiassistant.MessageR\ahistory\"\x85\x01\n" +
 	"\fChatResponse\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x124\n" +
 	"\n" +
 	"tool_calls\x18\x02 \x03(\v2\x15.aiassistant.ToolCallR\ttoolCalls\x12+\n" +
-	"\bproducts\x18\x03 \x03(\v2\x0f.common.ProductR\bproducts\"b\n" +
-	"\tChatChunk\x12\x14\n" +
-	"\x05delta\x18\x01 \x01(\tR\x05delta\x12\x12\n" +
-	"\x04done\x18\x02 \x01(\bR\x04done\x12+\n" +
-	"\bproducts\x18\x03 \x03(\v2\x0f.common.ProductR\bproducts\"A\n" +
+	"\bproducts\x18\x03 \x03(\v2\x0f.common.ProductR\bproducts\"\xb5\x01\n" +
+	"\tChatChunk\x12\x1d\n" +
+	"\n" +
+	"chunk_type\x18\x01 \x01(\tR\tchunkType\x12\x14\n" +
+	"\x05delta\x18\x02 \x01(\tR\x05delta\x12\x12\n" +
+	"\x04done\x18\x03 \x01(\bR\x04done\x122\n" +
+	"\ttool_call\x18\x04 \x01(\v2\x15.aiassistant.ToolCallR\btoolCall\x12+\n" +
+	"\bproducts\x18\x05 \x03(\v2\x0f.common.ProductR\bproducts\"Y\n" +
 	"\bToolCall\x12\x1b\n" +
-	"\ttool_name\x18\x01 \x01(\tR\btoolName\x12\x18\n" +
-	"\asummary\x18\x02 \x01(\tR\asummary2\x93\x01\n" +
+	"\ttool_name\x18\x01 \x01(\tR\btoolName\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
+	"\asummary\x18\x03 \x01(\tR\asummary2\x93\x01\n" +
 	"\x12AiAssistantService\x12;\n" +
 	"\x04Chat\x12\x18.aiassistant.ChatRequest\x1a\x19.aiassistant.ChatResponse\x12@\n" +
 	"\n" +
@@ -298,27 +385,30 @@ func file_aiassistant_proto_rawDescGZIP() []byte {
 	return file_aiassistant_proto_rawDescData
 }
 
-var file_aiassistant_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_aiassistant_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_aiassistant_proto_goTypes = []any{
-	(*ChatRequest)(nil),    // 0: aiassistant.ChatRequest
-	(*ChatResponse)(nil),   // 1: aiassistant.ChatResponse
-	(*ChatChunk)(nil),      // 2: aiassistant.ChatChunk
-	(*ToolCall)(nil),       // 3: aiassistant.ToolCall
-	(*common.Product)(nil), // 4: common.Product
+	(*Message)(nil),        // 0: aiassistant.Message
+	(*ChatRequest)(nil),    // 1: aiassistant.ChatRequest
+	(*ChatResponse)(nil),   // 2: aiassistant.ChatResponse
+	(*ChatChunk)(nil),      // 3: aiassistant.ChatChunk
+	(*ToolCall)(nil),       // 4: aiassistant.ToolCall
+	(*common.Product)(nil), // 5: common.Product
 }
 var file_aiassistant_proto_depIdxs = []int32{
-	3, // 0: aiassistant.ChatResponse.tool_calls:type_name -> aiassistant.ToolCall
-	4, // 1: aiassistant.ChatResponse.products:type_name -> common.Product
-	4, // 2: aiassistant.ChatChunk.products:type_name -> common.Product
-	0, // 3: aiassistant.AiAssistantService.Chat:input_type -> aiassistant.ChatRequest
-	0, // 4: aiassistant.AiAssistantService.ChatStream:input_type -> aiassistant.ChatRequest
-	1, // 5: aiassistant.AiAssistantService.Chat:output_type -> aiassistant.ChatResponse
-	2, // 6: aiassistant.AiAssistantService.ChatStream:output_type -> aiassistant.ChatChunk
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 0: aiassistant.ChatRequest.history:type_name -> aiassistant.Message
+	4, // 1: aiassistant.ChatResponse.tool_calls:type_name -> aiassistant.ToolCall
+	5, // 2: aiassistant.ChatResponse.products:type_name -> common.Product
+	4, // 3: aiassistant.ChatChunk.tool_call:type_name -> aiassistant.ToolCall
+	5, // 4: aiassistant.ChatChunk.products:type_name -> common.Product
+	1, // 5: aiassistant.AiAssistantService.Chat:input_type -> aiassistant.ChatRequest
+	1, // 6: aiassistant.AiAssistantService.ChatStream:input_type -> aiassistant.ChatRequest
+	2, // 7: aiassistant.AiAssistantService.Chat:output_type -> aiassistant.ChatResponse
+	3, // 8: aiassistant.AiAssistantService.ChatStream:output_type -> aiassistant.ChatChunk
+	7, // [7:9] is the sub-list for method output_type
+	5, // [5:7] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_aiassistant_proto_init() }
@@ -332,7 +422,7 @@ func file_aiassistant_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_aiassistant_proto_rawDesc), len(file_aiassistant_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

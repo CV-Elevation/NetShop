@@ -27,9 +27,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AiAssistantServiceClient interface {
-	// 普通对话（一次性返回完整回复）
 	Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*ChatResponse, error)
-	// 流式对话（打字机效果，推荐用于前端）
 	ChatStream(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatChunk], error)
 }
 
@@ -74,9 +72,7 @@ type AiAssistantService_ChatStreamClient = grpc.ServerStreamingClient[ChatChunk]
 // All implementations must embed UnimplementedAiAssistantServiceServer
 // for forward compatibility.
 type AiAssistantServiceServer interface {
-	// 普通对话（一次性返回完整回复）
 	Chat(context.Context, *ChatRequest) (*ChatResponse, error)
-	// 流式对话（打字机效果，推荐用于前端）
 	ChatStream(*ChatRequest, grpc.ServerStreamingServer[ChatChunk]) error
 	mustEmbedUnimplementedAiAssistantServiceServer()
 }
