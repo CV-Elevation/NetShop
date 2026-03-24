@@ -10,6 +10,7 @@ import (
 	"time"
 
 	adpb "kuoz/netshop/platform/shared/proto/ad"
+	cartpb "kuoz/netshop/platform/shared/proto/cart"
 	emailpb "kuoz/netshop/platform/shared/proto/email"
 	productpb "kuoz/netshop/platform/shared/proto/product"
 	recommendpb "kuoz/netshop/platform/shared/proto/recommend"
@@ -93,23 +94,40 @@ func main() {
 		_ = connAd.Close()
 		log.Fatalf("dial recommend service grpc failed: %v", err)
 	}
-
-	userClient := client.NewUserServiceClient(userpb.NewUserServiceClient(connUser))
-	emailClient := client.NewEmailServiceClient(emailpb.NewEmailServiceClient(connEmail))
-	productClient := client.NewProductServiceClient(productpb.NewProductServiceClient(connProduct))
-	adClient := client.NewAdServiceClient(adpb.NewAdServiceClient(connAd))
-	recommendClient := client.NewRecommendServiceClient(recommendpb.NewRecommendServiceClient(connRecommend))
-	//设置拦截器
-	authMiddleware := middleware.NewAuthMiddleware(tokenManager)
-
-	//配置handler
-	h, err := handler.NewWebHandler(cfg, oauthClient, tokenManager, userClient, emailClient, productClient, adClient, recommendClient)
+	//连接cart服务
+	connCart, err := grpc.DialContext(
+		dialCtx,
+		cfg.CartServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 	if err != nil {
 		_ = connUser.Close()
 		_ = connEmail.Close()
 		_ = connProduct.Close()
 		_ = connAd.Close()
 		_ = connRecommend.Close()
+		log.Fatalf("dial cart service grpc failed: %v", err)
+	}
+
+	userClient := client.NewUserServiceClient(userpb.NewUserServiceClient(connUser))
+	emailClient := client.NewEmailServiceClient(emailpb.NewEmailServiceClient(connEmail))
+	productClient := client.NewProductServiceClient(productpb.NewProductServiceClient(connProduct))
+	adClient := client.NewAdServiceClient(adpb.NewAdServiceClient(connAd))
+	recommendClient := client.NewRecommendServiceClient(recommendpb.NewRecommendServiceClient(connRecommend))
+	cartClient := client.NewCartServiceClient(cartpb.NewCartServiceClient(connCart))
+	//设置拦截器
+	authMiddleware := middleware.NewAuthMiddleware(tokenManager)
+
+	//配置handler
+	h, err := handler.NewWebHandler(cfg, oauthClient, tokenManager, userClient, emailClient, productClient, adClient, recommendClient, cartClient)
+	if err != nil {
+		_ = connUser.Close()
+		_ = connEmail.Close()
+		_ = connProduct.Close()
+		_ = connAd.Close()
+		_ = connRecommend.Close()
+		_ = connCart.Close()
 		log.Fatalf("init handler failed: %v", err)
 	}
 	mux := http.NewServeMux()
@@ -154,5 +172,8 @@ func main() {
 	}
 	if err := connRecommend.Close(); err != nil {
 		log.Printf("close recommend grpc connection failed: %v", err)
+	}
+	if err := connCart.Close(); err != nil {
+		log.Printf("close cart grpc connection failed: %v", err)
 	}
 }

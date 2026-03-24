@@ -1,11 +1,12 @@
 module netshop/services/frontend
 
-go 1.25.3
+go 1.26.1
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	google.golang.org/grpc v1.79.3
 	kuoz/netshop/platform/shared/proto/ad v0.0.0
+	kuoz/netshop/platform/shared/proto/cart v0.0.0
 	kuoz/netshop/platform/shared/proto/common v0.0.0
 	kuoz/netshop/platform/shared/proto/email v0.0.0
 	kuoz/netshop/platform/shared/proto/product v0.0.0
@@ -30,5 +31,7 @@ replace kuoz/netshop/platform/shared/proto/product => ../../shared/gen/product
 replace kuoz/netshop/platform/shared/proto/ad => ../../shared/gen/ad
 
 replace kuoz/netshop/platform/shared/proto/recommend => ../../shared/gen/recommend
+
+replace kuoz/netshop/platform/shared/proto/cart => ../../shared/gen/cart
 
 replace kuoz/netshop/platform/shared/proto/common => ../../shared/gen/common

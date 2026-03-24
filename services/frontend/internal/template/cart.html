@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Cart</title>
+  <style>
+    :root {
+      --bg: #f8f5ef;
+      --panel: #fffdf9;
+      --ink: #2f2317;
+      --accent: #1d5f7a;
+      --line: #e8dbca;
+      --warn-bg: #fff2dd;
+      --warn-ink: #8a4f12;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.85)),
+        repeating-linear-gradient(-30deg, #f9ead7 0, #f9ead7 16px, #f3dfc5 16px, #f3dfc5 32px);
+      padding: 24px;
+    }
+    .shell {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 14px 34px rgba(56, 34, 13, 0.12);
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .back {
+      text-decoration: none;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .meta {
+      color: #5d4b3c;
+      font-size: 0.92rem;
+    }
+    .warning {
+      margin-bottom: 12px;
+      background: var(--warn-bg);
+      color: var(--warn-ink);
+      border: 1px solid #f3d2a7;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+    }
+    .list {
+      display: grid;
+      gap: 12px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .thumb {
+      width: 100%;
+      height: 110px;
+      object-fit: contain;
+      object-position: center;
+      background: #fff;
+    }
+    .content {
+      padding: 10px 12px;
+    }
+    .title {
+      margin: 0;
+      font-size: 1.02rem;
+      line-height: 1.4;
+    }
+    .title a {
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .row {
+      margin-top: 6px;
+      color: #5d4b3c;
+      font-size: 0.93rem;
+    }
+    .summary {
+      margin-top: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-weight: 700;
+    }
+    .empty {
+      margin: 10px 0;
+      color: #6a5a4d;
+      font-style: italic;
+    }
+    @media (max-width: 760px) {
+      .item {
+        grid-template-columns: 1fr;
+      }
+      .thumb {
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="top">
+      <a class="back" href="/">Back to homepage</a>
+      <div class="meta">User: {{.Nickname}} ({{.UserID}})</div>
+    </div>
+
+    <h1>My Cart</h1>
+
+    {{if .HasInvalid}}
+      <div class="warning">Some items have stock issues, please review before checkout.</div>
+    {{end}}
+
+    {{if .Items}}
+      <section class="list">
+        {{range .Items}}
+          <article class="item">
+            <img class="thumb" src="{{.ImageURL}}" alt="{{.Name}}">
+            <div class="content">
+              <h2 class="title"><a href="{{.ProductURL}}">{{.Name}}</a></h2>
+              <div class="row">Price: {{.Price}}</div>
+              <div class="row">Quantity: {{.Quantity}}</div>
+              <div class="row">Subtotal: {{.Subtotal}}</div>
+              <div class="row">Stock: {{.StockStatus}} ({{.StockCount}})</div>
+            </div>
+          </article>
+        {{end}}
+      </section>
+
+      <div class="summary">
+        <div>Total items: {{.TotalCount}}</div>
+        <div>Total price: {{.TotalPrice}}</div>
+      </div>
+    {{else}}
+      <p class="empty">Your cart is empty.</p>
+    {{end}}
+  </main>
+</body>
+</html>

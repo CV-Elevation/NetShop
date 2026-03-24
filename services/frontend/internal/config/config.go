@@ -26,6 +26,7 @@ type Config struct {
 	ProductServiceAddr   string
 	AdServiceAddr        string
 	RecommendServiceAddr string
+	CartServiceAddr      string
 }
 
 func Load() Config {
@@ -53,6 +54,7 @@ func Load() Config {
 		ProductServiceAddr:   getEnv("PRODUCT_SERVICE_ADDR", "localhost:50053"),
 		AdServiceAddr:        getEnv("AD_SERVICE_ADDR", "localhost:50055"),
 		RecommendServiceAddr: getEnv("RECOMMEND_SERVICE_ADDR", "localhost:50054"),
+		CartServiceAddr:      getEnv("CART_SERVICE_ADDR", "localhost:50056"),
 	}
 }
 

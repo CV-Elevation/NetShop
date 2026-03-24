@@ -58,3 +58,59 @@ CREATE TABLE IF NOT EXISTS products.items (
 CREATE INDEX IF NOT EXISTS idx_products_category    ON products.items(category);
 CREATE INDEX IF NOT EXISTS idx_products_price_fen   ON products.items(price_fen);
 CREATE INDEX IF NOT EXISTS idx_products_sales_count ON products.items(sales_count DESC);
+
+INSERT INTO products.items (id, name, description, price_fen, currency, category, image_url, stock, rating, sales_count)
+VALUES (
+    gen_random_uuid(),
+    '狼与香辛料OST',
+    '狼与香辛料第一季原声带，聆听它，使你仿佛置身于中世纪的旅途',
+    27491,
+    'CNY',
+    '音乐、CD和黑胶唱片',
+    'https://m.media-amazon.com/images/I/51ZsKiAloxL._SX425_.jpg',
+    100,
+    4.7,
+    1555
+);
+
+INSERT INTO products.items (id, name, description, price_fen, currency, category, image_url, stock, rating, sales_count)
+VALUES (
+    gen_random_uuid(),
+    '狼与香辛料OST2',
+    '狼与香辛料第二季原声带，聆听它，使你再次置身于中世纪的旅途',
+    28642,
+    'CNY',
+    '音乐、CD和黑胶唱片',
+    'https://m.media-amazon.com/images/I/71jF-veiEAL._SX425_.jpg',
+    2,
+    4.6,
+    1334
+);
+
+INSERT INTO products.items (id, name, description, price_fen, currency, category, image_url, stock, rating, sales_count)
+VALUES (
+    gen_random_uuid(),
+    'Spice and Wolf: Holo(2024 版)弹出式游行PVC人偶 ',
+    ' Good Smile Company 出品。 POP UP PARADE 的新成员! POP UP PARADE 是一系列易于收集、价格实惠、快速发布的人偶! 每个公仔通常站立高度约为 17-18 厘米,该系列包含从流行动漫和游戏系列中大量人物选择,更多角色即将添加! ',
+    48189,
+    'CNY',
+    '角色模型',
+    'https://m.media-amazon.com/images/I/51ML-Rhkb3L._AC_SY879_.jpg',
+    23,
+    4.5,
+    344
+);
+
+INSERT INTO products.items (id, name, description, price_fen, currency, category, image_url, stock, rating, sales_count)
+VALUES (
+    gen_random_uuid(),
+    'Good Smile Company Pop Up Parade Cyberpunk Edge Runners Lucy L Size Non-Scale ',
+    ' POP UP PARADE "Large" is a series of figures that send new Shigeki to figure fans',
+    110155,
+    'CNY',
+    '角色模型',
+    'https://m.media-amazon.com/images/I/414WJV6AFjL._AC_SY879_.jpg',
+    333,
+    4.5,
+    223
+);

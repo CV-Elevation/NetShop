@@ -10,11 +10,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	adpb "kuoz/netshop/platform/shared/proto/ad"
+	cartpb "kuoz/netshop/platform/shared/proto/cart"
 	commonpb "kuoz/netshop/platform/shared/proto/common"
 	recommendpb "kuoz/netshop/platform/shared/proto/recommend"
 	"netshop/services/frontend/internal/client"
@@ -40,6 +42,7 @@ type WebHandler struct {
 	productClient   *client.ProductServiceClient
 	adClient        *client.AdServiceClient
 	recommendClient *client.RecommendServiceClient
+	cartClient      *client.CartServiceClient
 }
 
 type loginPageData struct {
@@ -60,6 +63,7 @@ type homePageData struct {
 }
 
 type productCard struct {
+	ID          string
 	Name        string
 	Description string
 	Category    string
@@ -74,6 +78,29 @@ type productDetailPageData struct {
 	Nickname string
 	UserID   string
 	Product  productCard
+	Message  string
+}
+
+type cartPageData struct {
+	Nickname   string
+	UserID     string
+	Items      []cartItemCard
+	TotalPrice string
+	TotalCount int32
+	HasInvalid bool
+}
+
+type cartItemCard struct {
+	ProductID   string
+	Name        string
+	ImageURL    string
+	Quantity    int32
+	Price       string
+	Subtotal    string
+	StockStatus string
+	StockCount  int32
+	Checked     bool
+	ProductURL  string
 }
 
 type adCard struct {
@@ -92,6 +119,7 @@ func NewWebHandler(
 	productClient *client.ProductServiceClient,
 	adClient *client.AdServiceClient,
 	recommendClient *client.RecommendServiceClient,
+	cartClient *client.CartServiceClient,
 ) (*WebHandler, error) {
 	tmpl, err := view.Parse()
 	if err != nil {
@@ -108,6 +136,7 @@ func NewWebHandler(
 		productClient:   productClient,
 		adClient:        adClient,
 		recommendClient: recommendClient,
+		cartClient:      cartClient,
 	}, nil
 }
 
@@ -118,6 +147,8 @@ func (h *WebHandler) Register(mux *http.ServeMux, authMiddleware *middleware.Aut
 	mux.HandleFunc("/auth/github/callback", h.githubCallback)
 	//这里是把内层的裸函数进行了包装，包装上了登录拦截的逻辑
 	mux.Handle("/products/", authMiddleware.RequireAuth(http.HandlerFunc(h.productDetailPage)))
+	mux.Handle("/cart", authMiddleware.RequireAuth(http.HandlerFunc(h.cartPage)))
+	mux.Handle("/cart/add", authMiddleware.RequireAuth(http.HandlerFunc(h.addToCart)))
 	mux.Handle("/", authMiddleware.RequireAuth(http.HandlerFunc(h.homePage)))
 	mux.Handle("/logout", authMiddleware.RequireAuth(http.HandlerFunc(h.logout)))
 }
@@ -371,10 +402,98 @@ func (h *WebHandler) productDetailPage(w http.ResponseWriter, r *http.Request) {
 		Nickname: user.Nickname,
 		UserID:   user.UserID,
 		Product:  mapOneProduct(product),
+		Message:  r.URL.Query().Get("msg"),
 	}
 
 	if err := h.tmpl.ExecuteTemplate(w, "product_detail.html", data); err != nil {
 		http.Error(w, "render product detail failed", http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) addToCart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := middleware.UserFromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+
+	productID := strings.TrimSpace(r.FormValue("product_id"))
+	if productID == "" {
+		http.Error(w, "product_id is required", http.StatusBadRequest)
+		return
+	}
+
+	quantity, err := strconv.Atoi(strings.TrimSpace(r.FormValue("quantity")))
+	if err != nil || quantity <= 0 {
+		http.Redirect(w, r, "/products/"+url.PathEscape(productID)+"?msg=Invalid+quantity", http.StatusFound)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	_, err = h.cartClient.AddItem(ctx, client.AddCartItemRequest{
+		UserID:    user.UserID,
+		ProductID: productID,
+		Quantity:  int32(quantity),
+	})
+	if err != nil {
+		log.Printf("add to cart failed: %v", err)
+		http.Redirect(w, r, "/products/"+url.PathEscape(productID)+"?msg=Add+to+cart+failed", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/products/"+url.PathEscape(productID)+"?msg=Added+to+cart", http.StatusFound)
+}
+
+func (h *WebHandler) cartPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.URL.Path != "/cart" {
+		http.NotFound(w, r)
+		return
+	}
+
+	user, ok := middleware.UserFromContext(r.Context())
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.cartClient.GetCart(ctx, client.GetCartRequest{UserID: user.UserID})
+	if err != nil {
+		log.Printf("load cart failed: %v", err)
+		http.Error(w, "load cart failed", http.StatusBadGateway)
+		return
+	}
+
+	data := cartPageData{
+		Nickname:   user.Nickname,
+		UserID:     user.UserID,
+		Items:      mapCartItems(resp.Items),
+		TotalPrice: formatPrice(resp.TotalPrice.GetAmount(), resp.TotalPrice.GetCurrency()),
+		TotalCount: resp.TotalCount,
+		HasInvalid: resp.HasInvalid,
+	}
+
+	if err := h.tmpl.ExecuteTemplate(w, "cart.html", data); err != nil {
+		http.Error(w, "render cart failed", http.StatusInternalServerError)
 	}
 }
 
@@ -394,6 +513,7 @@ func mapOneProduct(item *commonpb.Product) productCard {
 		return productCard{}
 	}
 	return productCard{
+		ID:          item.GetId(),
 		Name:        item.GetName(),
 		Description: item.GetDescription(),
 		Category:    item.GetCategory(),
@@ -402,6 +522,45 @@ func mapOneProduct(item *commonpb.Product) productCard {
 		ImageURL:    item.GetImageUrl(),
 		Rating:      item.GetRating(),
 		DetailURL:   "/products/" + url.PathEscape(item.GetId()),
+	}
+}
+
+func mapCartItems(items []*cartpb.CartItem) []cartItemCard {
+	result := make([]cartItemCard, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+
+		productID := item.GetProductId()
+		result = append(result, cartItemCard{
+			ProductID:   productID,
+			Name:        item.GetName(),
+			ImageURL:    item.GetImageUrl(),
+			Quantity:    item.GetQuantity(),
+			Price:       formatPrice(item.GetPrice().GetAmount(), item.GetPrice().GetCurrency()),
+			Subtotal:    formatPrice(item.GetSubtotal().GetAmount(), item.GetSubtotal().GetCurrency()),
+			StockStatus: stockStatusLabel(item.GetStockStatus()),
+			StockCount:  item.GetStockCount(),
+			Checked:     item.GetChecked(),
+			ProductURL:  "/products/" + url.PathEscape(productID),
+		})
+	}
+	return result
+}
+
+func stockStatusLabel(status cartpb.StockStatus) string {
+	switch status {
+	case cartpb.StockStatus_IN_STOCK:
+		return "In stock"
+	case cartpb.StockStatus_LOW_STOCK:
+		return "Low stock"
+	case cartpb.StockStatus_INSUFFICIENT:
+		return "Insufficient stock"
+	case cartpb.StockStatus_OUT_OF_STOCK:
+		return "Out of stock"
+	default:
+		return "Unknown"
 	}
 }
 

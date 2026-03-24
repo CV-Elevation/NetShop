@@ -33,7 +33,7 @@ func (s *RecommendService) RecordBehavior(ctx context.Context, req *recommendpb.
 func staticProducts() []*commonpb.Product {
 	return []*commonpb.Product{
 		{
-			Id:       "0f0f1f26-0a6a-493a-8c53-0348a098929f",
+			Id:       "b2114c08-d65c-43a3-a5b6-fe831b818a3f",
 			Name:     "狼与香辛料OST",
 			Category: "音乐、CD和黑胶唱片",
 			Price:    &commonpb.Money{Amount: 27491, Currency: "CNY"},
