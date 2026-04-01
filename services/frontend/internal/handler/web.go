@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	adpb "kuoz/netshop/platform/shared/proto/ad"
+	aiassistantpb "kuoz/netshop/platform/shared/proto/aiassistant"
 	cartpb "kuoz/netshop/platform/shared/proto/cart"
 	commonpb "kuoz/netshop/platform/shared/proto/common"
 	recommendpb "kuoz/netshop/platform/shared/proto/recommend"
@@ -33,16 +35,17 @@ import (
 const oauthStateCookie = "oauth_state"
 
 type WebHandler struct {
-	cfg             config.Config
-	tmpl            *template.Template
-	oauthClient     *oauth.GitHubClient
-	tokens          *token.Manager
-	userClient      *client.UserServiceClient
-	emailClient     *client.EmailServiceClient
-	productClient   *client.ProductServiceClient
-	adClient        *client.AdServiceClient
-	recommendClient *client.RecommendServiceClient
-	cartClient      *client.CartServiceClient
+	cfg               config.Config
+	tmpl              *template.Template
+	oauthClient       *oauth.GitHubClient
+	tokens            *token.Manager
+	userClient        *client.UserServiceClient
+	emailClient       *client.EmailServiceClient
+	productClient     *client.ProductServiceClient
+	adClient          *client.AdServiceClient
+	recommendClient   *client.RecommendServiceClient
+	cartClient        *client.CartServiceClient
+	aiAssistantClient *client.AIAssistantServiceClient
 }
 
 type loginPageData struct {
@@ -120,6 +123,7 @@ func NewWebHandler(
 	adClient *client.AdServiceClient,
 	recommendClient *client.RecommendServiceClient,
 	cartClient *client.CartServiceClient,
+	aiAssistantClient *client.AIAssistantServiceClient,
 ) (*WebHandler, error) {
 	tmpl, err := view.Parse()
 	if err != nil {
@@ -127,16 +131,17 @@ func NewWebHandler(
 	}
 
 	return &WebHandler{
-		cfg:             cfg,
-		tmpl:            tmpl,
-		oauthClient:     oauthClient,
-		tokens:          tokens,
-		userClient:      userClient,
-		emailClient:     emailClient,
-		productClient:   productClient,
-		adClient:        adClient,
-		recommendClient: recommendClient,
-		cartClient:      cartClient,
+		cfg:               cfg,
+		tmpl:              tmpl,
+		oauthClient:       oauthClient,
+		tokens:            tokens,
+		userClient:        userClient,
+		emailClient:       emailClient,
+		productClient:     productClient,
+		adClient:          adClient,
+		recommendClient:   recommendClient,
+		cartClient:        cartClient,
+		aiAssistantClient: aiAssistantClient,
 	}, nil
 }
 
@@ -149,8 +154,105 @@ func (h *WebHandler) Register(mux *http.ServeMux, authMiddleware *middleware.Aut
 	mux.Handle("/products/", authMiddleware.RequireAuth(http.HandlerFunc(h.productDetailPage)))
 	mux.Handle("/cart", authMiddleware.RequireAuth(http.HandlerFunc(h.cartPage)))
 	mux.Handle("/cart/add", authMiddleware.RequireAuth(http.HandlerFunc(h.addToCart)))
+	mux.Handle("/assistant/chat", authMiddleware.RequireAuth(http.HandlerFunc(h.aiAssistantChat)))
 	mux.Handle("/", authMiddleware.RequireAuth(http.HandlerFunc(h.homePage)))
 	mux.Handle("/logout", authMiddleware.RequireAuth(http.HandlerFunc(h.logout)))
+}
+
+type aiAssistantStreamResponse struct {
+	Type     string        `json:"type"`
+	Delta    string        `json:"delta,omitempty"`
+	ToolCall string        `json:"tool_call,omitempty"`
+	Products []productCard `json:"products,omitempty"`
+	Done     bool          `json:"done,omitempty"`
+}
+
+func (h *WebHandler) aiAssistantChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := middleware.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+
+	message := strings.TrimSpace(r.FormValue("message"))
+	if message == "" {
+		http.Error(w, "message is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	err := h.aiAssistantClient.StreamChat(ctx, client.ChatRequest{
+		SessionID: user.UserID,
+		UserID:    user.UserID,
+		Message:   message,
+	}, func(chunk *aiassistantpb.ChatChunk) error {
+		if chunk == nil {
+			return nil
+		}
+
+		event := aiAssistantStreamResponse{Type: chunk.GetChunkType()}
+		switch chunk.GetChunkType() {
+		case "text":
+			event.Delta = chunk.GetDelta()
+		case "tool_status":
+			if toolCall := chunk.GetToolCall(); toolCall != nil {
+				summary := strings.TrimSpace(toolCall.GetSummary())
+				if summary == "" {
+					summary = toolCall.GetToolName()
+				}
+				event.ToolCall = summary
+			}
+		case "products":
+			event.Products = mapProducts(chunk.GetProducts())
+		case "done":
+			event.Done = chunk.GetDone()
+		default:
+			event.Delta = chunk.GetDelta()
+		}
+
+		payload, marshalErr := json.Marshal(event)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		if _, writeErr := w.Write(append(payload, '\n')); writeErr != nil {
+			return writeErr
+		}
+		flusher.Flush()
+		return nil
+	})
+	if err != nil {
+		log.Printf("aiassistant chat failed: %v", err)
+		errorPayload, _ := json.Marshal(aiAssistantStreamResponse{
+			Type:     "error",
+			ToolCall: "assistant service unavailable",
+			Done:     true,
+		})
+		_, _ = w.Write(append(errorPayload, '\n'))
+		flusher.Flush()
+		return
+	}
 }
 
 // 健康检测接口

@@ -6,6 +6,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	google.golang.org/grpc v1.79.3
 	kuoz/netshop/platform/shared/proto/ad v0.0.0
+	kuoz/netshop/platform/shared/proto/aiassistant v0.0.0
 	kuoz/netshop/platform/shared/proto/cart v0.0.0
 	kuoz/netshop/platform/shared/proto/common v0.0.0
 	kuoz/netshop/platform/shared/proto/email v0.0.0
@@ -35,3 +36,5 @@ replace kuoz/netshop/platform/shared/proto/recommend => ../../shared/gen/recomme
 replace kuoz/netshop/platform/shared/proto/cart => ../../shared/gen/cart
 
 replace kuoz/netshop/platform/shared/proto/common => ../../shared/gen/common
+
+replace kuoz/netshop/platform/shared/proto/aiassistant => ../../shared/gen/aiassistant

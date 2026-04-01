@@ -126,6 +126,86 @@
       text-decoration: none;
       font-weight: 700;
     }
+    .assistant-toggle {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      padding: 12px 16px;
+      box-shadow: 0 10px 20px rgba(29, 95, 122, 0.28);
+      cursor: pointer;
+      z-index: 20;
+    }
+    .assistant-panel {
+      position: fixed;
+      right: 24px;
+      bottom: 78px;
+      width: min(420px, calc(100vw - 48px));
+      max-height: min(72vh, 760px);
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(56, 34, 13, 0.2);
+      padding: 14px;
+      z-index: 20;
+      display: none;
+    }
+    .assistant-panel.show {
+      display: block;
+    }
+    .assistant-title {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+    .assistant-form {
+      display: grid;
+      gap: 8px;
+    }
+    .assistant-form textarea {
+      width: 100%;
+      min-height: 80px;
+      resize: vertical;
+      border: 1px solid #d8cab9;
+      border-radius: 10px;
+      padding: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--ink);
+      background: #fff;
+    }
+    .assistant-result {
+      margin-top: 12px;
+      border-top: 1px dashed var(--line);
+      padding-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .assistant-tools {
+      margin: 0;
+      padding-left: 18px;
+      color: #5d4b3c;
+      font-size: 0.92rem;
+    }
+    .assistant-products {
+      display: grid;
+      gap: 8px;
+    }
+    .assistant-product {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px;
+    }
+    .assistant-product a {
+      text-decoration: none;
+      color: var(--accent);
+      font-weight: 700;
+    }
     form {
       margin-top: 26px;
     }
@@ -228,5 +308,152 @@
       <button type="submit">Log out</button>
     </form>
   </main>
+
+  <button id="assistant-toggle" class="assistant-toggle" type="button">AI 助手</button>
+  <aside id="assistant-panel" class="assistant-panel" aria-live="polite">
+    <h3 class="assistant-title">NetShop AI 助手</h3>
+    <form id="assistant-form" class="assistant-form">
+      <textarea id="assistant-message" name="message" placeholder="例如：帮我推荐狼与香辛料相关商品"></textarea>
+      <button id="assistant-submit" type="submit">发送</button>
+    </form>
+    <section id="assistant-result" class="assistant-result" style="display:none;">
+      <div id="assistant-text"></div>
+      <ul id="assistant-tools" class="assistant-tools"></ul>
+      <div id="assistant-products" class="assistant-products"></div>
+    </section>
+  </aside>
+
+  <script>
+    const assistantToggle = document.getElementById('assistant-toggle');
+    const assistantPanel = document.getElementById('assistant-panel');
+    const assistantForm = document.getElementById('assistant-form');
+    const assistantMessage = document.getElementById('assistant-message');
+    const assistantSubmit = document.getElementById('assistant-submit');
+    const assistantResult = document.getElementById('assistant-result');
+    const assistantText = document.getElementById('assistant-text');
+    const assistantTools = document.getElementById('assistant-tools');
+    const assistantProducts = document.getElementById('assistant-products');
+
+    assistantToggle.addEventListener('click', () => {
+      assistantPanel.classList.toggle('show');
+      if (assistantPanel.classList.contains('show')) {
+        assistantMessage.focus();
+      }
+    });
+
+    assistantForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = assistantMessage.value.trim();
+      if (!message) {
+        return;
+      }
+
+      assistantSubmit.disabled = true;
+      assistantSubmit.textContent = '发送中...';
+      assistantResult.style.display = 'grid';
+      assistantText.textContent = '';
+      assistantTools.innerHTML = '';
+      assistantProducts.innerHTML = '';
+
+      try {
+        const formData = new URLSearchParams();
+        formData.set('message', message);
+
+        const response = await fetch('/assistant/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: formData.toString(),
+        });
+
+        if (!response.ok) {
+          throw new Error('request failed');
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('stream not supported');
+        }
+
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              return;
+            }
+
+            let payload;
+            try {
+              payload = JSON.parse(trimmed);
+            } catch (_) {
+              return;
+            }
+
+            if (payload.type === 'text') {
+              assistantText.textContent += payload.delta || '';
+              return;
+            }
+
+            if (payload.type === 'tool_status' && payload.tool_call) {
+              const li = document.createElement('li');
+              li.textContent = payload.tool_call;
+              assistantTools.appendChild(li);
+              return;
+            }
+
+            if (payload.type === 'products') {
+              assistantProducts.innerHTML = '';
+              (payload.products || []).forEach((product) => {
+                const detailURL = product.detail_url || product.DetailURL || ('/products/' + encodeURIComponent(product.id || product.ID || ''));
+                const productName = product.name || product.Name || '未命名商品';
+                const productPrice = product.price || product.Price || '';
+
+                const card = document.createElement('article');
+                card.className = 'assistant-product';
+
+                const link = document.createElement('a');
+                link.href = detailURL;
+                link.textContent = productName;
+                card.appendChild(link);
+
+                if (productPrice) {
+                  const p = document.createElement('div');
+                  p.textContent = productPrice;
+                  card.appendChild(p);
+                }
+                assistantProducts.appendChild(card);
+              });
+              return;
+            }
+
+            if (payload.type === 'error') {
+              assistantText.textContent = 'AI 助手暂不可用，请稍后重试。';
+            }
+          });
+        }
+      } catch (error) {
+        assistantResult.style.display = 'grid';
+        assistantText.textContent = 'AI 助手暂不可用，请稍后重试。';
+        assistantTools.innerHTML = '';
+        assistantProducts.innerHTML = '';
+      } finally {
+        assistantSubmit.disabled = false;
+        assistantSubmit.textContent = '发送';
+      }
+    });
+  </script>
 </body>
 </html>

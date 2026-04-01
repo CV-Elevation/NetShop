@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"netshop/services/frontend/internal/token"
@@ -48,10 +49,13 @@ func (m *AuthMiddleware) authenticate(w http.ResponseWriter, r *http.Request) (A
 				Nickname: claims.Nickname,
 			}, true
 		}
+		log.Println("access token parse fail!")
+
 		if !token.IsExpired(accessErr) {
 			return AuthenticatedUser{}, false
 		}
 	}
+	log.Println("access token is nil!")
 	//这里加入refresh-token本意是想存到redis，来管控token黑名单机制的，但是现阶段引入redis有点复杂，没什么意义
 	refreshCookie, err := r.Cookie(token.RefreshCookieName)
 	if err != nil || refreshCookie.Value == "" {

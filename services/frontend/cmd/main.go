@@ -10,6 +10,7 @@ import (
 	"time"
 
 	adpb "kuoz/netshop/platform/shared/proto/ad"
+	aiassistantpb "kuoz/netshop/platform/shared/proto/aiassistant"
 	cartpb "kuoz/netshop/platform/shared/proto/cart"
 	emailpb "kuoz/netshop/platform/shared/proto/email"
 	productpb "kuoz/netshop/platform/shared/proto/product"
@@ -110,17 +111,12 @@ func main() {
 		log.Fatalf("dial cart service grpc failed: %v", err)
 	}
 
-	userClient := client.NewUserServiceClient(userpb.NewUserServiceClient(connUser))
-	emailClient := client.NewEmailServiceClient(emailpb.NewEmailServiceClient(connEmail))
-	productClient := client.NewProductServiceClient(productpb.NewProductServiceClient(connProduct))
-	adClient := client.NewAdServiceClient(adpb.NewAdServiceClient(connAd))
-	recommendClient := client.NewRecommendServiceClient(recommendpb.NewRecommendServiceClient(connRecommend))
-	cartClient := client.NewCartServiceClient(cartpb.NewCartServiceClient(connCart))
-	//设置拦截器
-	authMiddleware := middleware.NewAuthMiddleware(tokenManager)
-
-	//配置handler
-	h, err := handler.NewWebHandler(cfg, oauthClient, tokenManager, userClient, emailClient, productClient, adClient, recommendClient, cartClient)
+	connAIAssistant, err := grpc.DialContext(
+		dialCtx,
+		cfg.AIAssistantServiceAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 	if err != nil {
 		_ = connUser.Close()
 		_ = connEmail.Close()
@@ -128,6 +124,29 @@ func main() {
 		_ = connAd.Close()
 		_ = connRecommend.Close()
 		_ = connCart.Close()
+		log.Fatalf("dial aiassistant service grpc failed: %v", err)
+	}
+
+	userClient := client.NewUserServiceClient(userpb.NewUserServiceClient(connUser))
+	emailClient := client.NewEmailServiceClient(emailpb.NewEmailServiceClient(connEmail))
+	productClient := client.NewProductServiceClient(productpb.NewProductServiceClient(connProduct))
+	adClient := client.NewAdServiceClient(adpb.NewAdServiceClient(connAd))
+	recommendClient := client.NewRecommendServiceClient(recommendpb.NewRecommendServiceClient(connRecommend))
+	cartClient := client.NewCartServiceClient(cartpb.NewCartServiceClient(connCart))
+	aiAssistantClient := client.NewAIAssistantServiceClient(aiassistantpb.NewAiAssistantServiceClient(connAIAssistant))
+	//设置拦截器
+	authMiddleware := middleware.NewAuthMiddleware(tokenManager)
+
+	//配置handler
+	h, err := handler.NewWebHandler(cfg, oauthClient, tokenManager, userClient, emailClient, productClient, adClient, recommendClient, cartClient, aiAssistantClient)
+	if err != nil {
+		_ = connUser.Close()
+		_ = connEmail.Close()
+		_ = connProduct.Close()
+		_ = connAd.Close()
+		_ = connRecommend.Close()
+		_ = connCart.Close()
+		_ = connAIAssistant.Close()
 		log.Fatalf("init handler failed: %v", err)
 	}
 	mux := http.NewServeMux()
@@ -175,5 +194,8 @@ func main() {
 	}
 	if err := connCart.Close(); err != nil {
 		log.Printf("close cart grpc connection failed: %v", err)
+	}
+	if err := connAIAssistant.Close(); err != nil {
+		log.Printf("close aiassistant grpc connection failed: %v", err)
 	}
 }

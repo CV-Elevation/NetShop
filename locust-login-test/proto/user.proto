@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "./proto";
+
+service UserService {
+  rpc LoginOrRegister(LoginOrRegisterRequest) returns (LoginOrRegisterResponse);
+}
+
+message LoginOrRegisterRequest {
+  string provider = 1;
+  string open_id  = 2;
+  string nickname = 3;
+  string avatar   = 4;
+  string email    = 5;
+}
+
+message LoginOrRegisterResponse {
+  string user_id = 1;
+  string token   = 2;
+}

@@ -33,11 +33,19 @@ func (s *RecommendService) RecordBehavior(ctx context.Context, req *recommendpb.
 func staticProducts() []*commonpb.Product {
 	return []*commonpb.Product{
 		{
-			Id:       "b2114c08-d65c-43a3-a5b6-fe831b818a3f",
+			Id:       "c1834635-4cfc-4d30-a50d-de27277d5069",
 			Name:     "狼与香辛料OST",
 			Category: "音乐、CD和黑胶唱片",
 			Price:    &commonpb.Money{Amount: 27491, Currency: "CNY"},
 			ImageUrl: "https://m.media-amazon.com/images/I/51ZsKiAloxL._SX425_.jpg",
+			Rating:   4.5,
+		},
+		{
+			Id:       "c4f19c66-538e-4044-8624-b7db6a7c6fcf",
+			Name:     "Good Smile Company Pop Up Parade Cyberpunk Edge Runners Lucy L Size Non-Scale",
+			Category: "角色模型",
+			Price:    &commonpb.Money{Amount: 110155, Currency: "CNY"},
+			ImageUrl: "https://m.media-amazon.com/images/I/414WJV6AFjL._AC_SY879_.jpg",
 			Rating:   4.5,
 		},
 	}
