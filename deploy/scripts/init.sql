@@ -114,3 +114,18 @@ VALUES (
     4.5,
     223
 );
+
+-- AI 客服知识库
+CREATE SCHEMA IF NOT EXISTS knowledge;
+
+CREATE TABLE IF NOT EXISTS knowledge.chunks (
+    id         BIGSERIAL PRIMARY KEY,
+    question   TEXT NOT NULL,
+    answer     TEXT NOT NULL,
+    chunk_text TEXT NOT NULL,
+    source     TEXT NOT NULL DEFAULT 'seed',
+    embedding  vector NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_source ON knowledge.chunks(source);
