@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -46,11 +47,57 @@ func NewDoubaoClientFromEnv() *DoubaoClient {
 		httpClient:       &http.Client{Timeout: 12 * time.Second},
 		embeddingClient:  &http.Client{Timeout: 12 * time.Second},
 		baseURL:          strings.TrimRight(baseURL, "/"),
-		apiKey:           strings.TrimSpace(os.Getenv("DOUBAO_API_KEY")),
+		apiKey:           resolveArkAPIKey(),
 		embeddingBaseURL: embeddingBaseURL,
 		embeddingModel:   defaultValue(os.Getenv("LOCAL_EMBEDDING_MODEL_NAME"), "qwen3-embedding:0.6b"),
-		generationModel:  defaultValue(os.Getenv("DOUBAO_CHAT_MODEL"), "doubao-seed-2-0-mini"),
+		generationModel:  defaultValue(os.Getenv("DOUBAO_CHAT_MODEL"), "doubao-seed-2-0-mini-260215"),
 	}
+}
+
+func resolveArkAPIKey() string {
+	for _, key := range []string{"ARK_API_KEY", "DOUBAO_API_KEY"} {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+
+	for _, path := range []string{"internal/.env", "services/aiassistant/internal/.env"} {
+		if value := readKeyFromEnvFile(path, "ARK_API_KEY"); value != "" {
+			return value
+		}
+		if value := readKeyFromEnvFile(path, "DOUBAO_API_KEY"); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func readKeyFromEnvFile(path string, key string) string {
+	file, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		k := strings.TrimSpace(parts[0])
+		if k != key {
+			continue
+		}
+		v := strings.TrimSpace(parts[1])
+		v = strings.Trim(v, `"`)
+		return v
+	}
+	return ""
 }
 
 func (c *DoubaoClient) Embed(ctx context.Context, text string) ([]float64, error) {
@@ -91,7 +138,7 @@ func (c *DoubaoClient) Embed(ctx context.Context, text string) ([]float64, error
 
 func (c *DoubaoClient) GenerateCustomerReply(ctx context.Context, question string, knowledgeContext string) (string, error) {
 	if c.apiKey == "" {
-		return "", errors.New("DOUBAO_API_KEY is empty")
+		return "", errors.New("ARK_API_KEY/DOUBAO_API_KEY is empty")
 	}
 	if strings.TrimSpace(question) == "" {
 		return "", errors.New("question is empty")

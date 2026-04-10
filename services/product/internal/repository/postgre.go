@@ -103,6 +103,11 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) ([
 		args = append(args, filter.MaxPrice)
 		idx++
 	}
+	if filter.MinPrice > 0 {
+		where = append(where, "price_fen >= $"+itoa(idx))
+		args = append(args, filter.MinPrice)
+		idx++
+	}
 	if filter.Category != "" {
 		where = append(where, "category = $"+itoa(idx))
 		args = append(args, filter.Category)

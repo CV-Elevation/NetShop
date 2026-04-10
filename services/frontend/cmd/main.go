@@ -156,7 +156,7 @@ func main() {
 		Addr:         cfg.ListenAddr,
 		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 70 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 

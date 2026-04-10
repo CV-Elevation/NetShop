@@ -190,7 +190,7 @@ func (h *WebHandler) aiAssistantChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 35*time.Second)
 	defer cancel()
 
 	flusher, ok := w.(http.Flusher)

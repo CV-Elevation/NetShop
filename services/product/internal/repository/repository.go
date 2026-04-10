@@ -24,6 +24,7 @@ type ListFilter struct {
 type SearchFilter struct {
 	Keyword  string
 	MaxPrice int64
+	MinPrice int64
 	Category string
 	Page     int32
 	PageSize int32

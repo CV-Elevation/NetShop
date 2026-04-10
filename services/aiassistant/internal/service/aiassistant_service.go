@@ -18,11 +18,12 @@ import (
 type AIAssistantService struct {
 	repo        repository.Repository
 	intent      llm.IntentClassifier
+	query       *llm.ProductQueryExtractor
 	answerAgent llm.AnswerGenerator
 }
 
 func NewAIAssistantService(repo repository.Repository, intent llm.IntentClassifier, answerAgent llm.AnswerGenerator) *AIAssistantService {
-	return &AIAssistantService{repo: repo, intent: intent, answerAgent: answerAgent}
+	return &AIAssistantService{repo: repo, intent: intent, query: llm.NewProductQueryExtractorFromEnv(), answerAgent: answerAgent}
 }
 
 func (s *AIAssistantService) Chat(ctx context.Context, req *aiassistantpb.ChatRequest) (*aiassistantpb.ChatResponse, error) {
@@ -130,7 +131,7 @@ func (s *AIAssistantService) buildChatResult(ctx context.Context, req *aiassista
 		Summary:  fmt.Sprintf("意图=%v", intents),
 	})
 
-	hasProductIntent := containsIntent(intents, llm.IntentProductSearch) || containsIntent(intents, llm.IntentQueryProductPerformance)
+	hasProductIntent := containsIntent(intents, llm.IntentProductSearch)
 	hasServiceIntent := containsIntent(intents, llm.IntentCustomerService)
 
 	parts := make([]string, 0, 2)
@@ -162,7 +163,7 @@ func (s *AIAssistantService) buildChatResult(ctx context.Context, req *aiassista
 				answer, err := s.answerAgent.GenerateCustomerReply(ctx, message, knowledgeContext)
 				if err != nil {
 					result.ToolCalls[len(result.ToolCalls)-1].Status = "error"
-					result.ToolCalls[len(result.ToolCalls)-1].Summary = "Seed 模型调用失败，已返回检索摘要"
+					result.ToolCalls[len(result.ToolCalls)-1].Summary = fmt.Sprintf("Seed 模型调用失败，已返回检索摘要（原因：%v）", err)
 					parts = append(parts, "客服答复："+rag.BuildFallbackCustomerAnswer(chunks))
 				} else {
 					result.ToolCalls[len(result.ToolCalls)-1].Summary = "已生成客服回复"
@@ -173,8 +174,26 @@ func (s *AIAssistantService) buildChatResult(ctx context.Context, req *aiassista
 	}
 
 	if hasProductIntent {
-		keyword := llm.ExtractProductKeyword(message)
-		products, err := s.repo.SearchProducts(ctx, keyword, 5)
+		searchQuery := llm.ProductSearchQuery{Keyword: message}
+		if s.query != nil {
+			extractedQuery, err := s.query.Extract(ctx, message)
+			if err != nil {
+				result.ToolCalls = append(result.ToolCalls, &aiassistantpb.ToolCall{
+					ToolName: "search_query_extraction",
+					Status:   "error",
+					Summary:  fmt.Sprintf("LLM 提取商品查询失败，已回退原始关键词（原因：%v）", err),
+				})
+			} else {
+				searchQuery = extractedQuery
+				result.ToolCalls = append(result.ToolCalls, &aiassistantpb.ToolCall{
+					ToolName: "search_query_extraction",
+					Status:   "done",
+					Summary:  fmt.Sprintf("keyword=%q max_price=%d min_price=%d category=%q", searchQuery.Keyword, searchQuery.MaxPrice, searchQuery.MinPrice, searchQuery.Category),
+				})
+			}
+		}
+
+		products, err := s.repo.SearchProducts(ctx, searchQuery, 5)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "search products failed")
 		}
@@ -184,14 +203,14 @@ func (s *AIAssistantService) buildChatResult(ctx context.Context, req *aiassista
 			result.ToolCalls = append(result.ToolCalls, &aiassistantpb.ToolCall{
 				ToolName: "search_products",
 				Status:   "done",
-				Summary:  fmt.Sprintf("关键词 \"%s\" 未命中商品", keyword),
+				Summary:  fmt.Sprintf("关键词=%q max_price=%d min_price=%d category=%q 未命中商品", searchQuery.Keyword, searchQuery.MaxPrice, searchQuery.MinPrice, searchQuery.Category),
 			})
 			parts = append(parts, "商品检索：我没有找到匹配的商品。你可以换个关键词，例如商品名、分类或用途。")
 		} else {
 			result.ToolCalls = append(result.ToolCalls, &aiassistantpb.ToolCall{
 				ToolName: "search_products",
 				Status:   "done",
-				Summary:  fmt.Sprintf("已根据关键词 \"%s\" 检索到 %d 个商品", keyword, len(result.Products)),
+				Summary:  fmt.Sprintf("已根据 keyword=%q max_price=%d min_price=%d category=%q 检索到 %d 个商品", searchQuery.Keyword, searchQuery.MaxPrice, searchQuery.MinPrice, searchQuery.Category, len(result.Products)),
 			})
 			parts = append(parts, fmt.Sprintf("商品检索：我为你找到 %d 个相关商品，已附在下方。", len(result.Products)))
 		}

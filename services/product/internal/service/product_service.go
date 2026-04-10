@@ -63,13 +63,17 @@ func (s *ProductService) SearchProducts(ctx context.Context, req *productpb.Sear
 	if pageSize <= 0 {
 		pageSize = 20
 	}
-	products, total, err := s.repo.Search(ctx, repository.SearchFilter{
+
+	filter := repository.SearchFilter{
 		Keyword:  req.Keyword,
 		MaxPrice: req.MaxPrice,
+		MinPrice: req.MinPrice,
 		Category: req.Category,
 		Page:     page,
 		PageSize: pageSize,
-	})
+	}
+
+	products, total, err := s.repo.Search(ctx, filter)
 	if err != nil {
 		return nil, 0, status.Error(codes.Internal, "db error")
 	}

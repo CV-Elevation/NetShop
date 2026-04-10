@@ -9,12 +9,13 @@ import (
 
 	commonpb "kuoz/netshop/platform/shared/proto/common"
 	productpb "kuoz/netshop/platform/shared/proto/product"
+	"netshop/services/aiassistant/internal/service/llm"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository interface {
-	SearchProducts(ctx context.Context, keyword string, limit int32) ([]*commonpb.Product, error)
+	SearchProducts(ctx context.Context, query llm.ProductSearchQuery, limit int32) ([]*commonpb.Product, error)
 	RetrieveKnowledge(ctx context.Context, question string, limit int32) ([]KnowledgeChunk, error)
 }
 
@@ -37,13 +38,16 @@ func NewProductRepository(productClient productpb.ProductServiceClient, kb *Know
 	return &ProductRepository{productClient: productClient, kb: kb}
 }
 
-func (r *ProductRepository) SearchProducts(ctx context.Context, keyword string, limit int32) ([]*commonpb.Product, error) {
+func (r *ProductRepository) SearchProducts(ctx context.Context, query llm.ProductSearchQuery, limit int32) ([]*commonpb.Product, error) {
 	if limit <= 0 {
 		limit = 5
 	}
 
 	resp, err := r.productClient.SearchProducts(ctx, &productpb.SearchProductsRequest{
-		Keyword: strings.TrimSpace(keyword),
+		Keyword:  strings.TrimSpace(query.Keyword),
+		MaxPrice: query.MaxPrice,
+		MinPrice: query.MinPrice,
+		Category: strings.TrimSpace(query.Category),
 		Pagination: &commonpb.Pagination{
 			Page:     1,
 			PageSize: limit,
@@ -165,6 +169,35 @@ func (r *KnowledgeBaseRepository) BuildKnowledgeBase(ctx context.Context) error 
 		}
 	}
 	return nil
+}
+
+func (r *KnowledgeBaseRepository) DeleteChunksBySource(ctx context.Context, source string) error {
+	if strings.TrimSpace(source) == "" {
+		return errors.New("source is empty")
+	}
+	_, err := r.pool.Exec(ctx, `DELETE FROM knowledge.chunks WHERE source = $1`, source)
+	return err
+}
+
+func (r *KnowledgeBaseRepository) InsertChunk(ctx context.Context, question, answer, chunkText, source string, embedding []float64) error {
+	if strings.TrimSpace(question) == "" {
+		return errors.New("question is empty")
+	}
+	if strings.TrimSpace(answer) == "" {
+		return errors.New("answer is empty")
+	}
+	if len(embedding) == 0 {
+		return errors.New("embedding is empty")
+	}
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO knowledge.chunks (question, answer, chunk_text, source, embedding) VALUES ($1, $2, $3, $4, $5::vector)`,
+		question,
+		answer,
+		chunkText,
+		source,
+		vectorLiteral(embedding),
+	)
+	return err
 }
 
 func (r *KnowledgeBaseRepository) Query(ctx context.Context, question string, limit int) ([]KnowledgeChunk, error) {
