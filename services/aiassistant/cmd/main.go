@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
 	"os"
@@ -9,19 +8,22 @@ import (
 	"syscall"
 	"time"
 
+	"netshop/services/aiassistant/internal/agent"
 	"netshop/services/aiassistant/internal/handler"
-	"netshop/services/aiassistant/internal/repository"
 	"netshop/services/aiassistant/internal/service"
-	"netshop/services/aiassistant/internal/service/llm"
+	"netshop/services/aiassistant/shared"
+	"netshop/services/aiassistant/tool"
 
 	productpb "kuoz/netshop/platform/shared/proto/product"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
+	_ = godotenv.Load()
 	// ── Product 服务连接 ──────────────────────────────────────
 	productAddr := os.Getenv("PRODUCT_GRPC_ADDR")
 	if productAddr == "" {
@@ -44,30 +46,15 @@ func main() {
 		log.Fatalf("listen failed: %v", err)
 	}
 
-	doubaoClient := llm.NewDoubaoClientFromEnv()
-	intentClassifier := llm.NewLocalIntentClassifierFromEnv()
+	modelConf := shared.NewModelConfig()
 
-	kbDSN := os.Getenv("KNOWLEDGE_DB_DSN")
-	if kbDSN == "" {
-		kbDSN = "postgres://netshop:secret@localhost:5432/netshop?sslmode=disable"
-	}
+	agent := agent.NewAgent(modelConf, agent.CodingAgentSystemPrompt, []tool.Tool{
+		tool.NewCustomerTool(),
+		tool.NewProductSearchTool(productClient),
+	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
+	aiAssistantSvc := service.NewAIAssistantService(agent)
 
-	kbRepo, err := repository.NewKnowledgeBaseRepository(ctx, kbDSN, doubaoClient)
-	if err != nil {
-		log.Printf("knowledge base disabled: %v", err)
-	}
-
-	repo := repository.NewProductRepository(productClient, kbRepo)
-	defer repo.Close()
-
-	if err := repo.BuildKnowledgeBase(ctx); err != nil {
-		log.Printf("knowledge base bootstrap skipped: %v", err)
-	}
-
-	aiAssistantSvc := service.NewAIAssistantService(repo, intentClassifier, doubaoClient)
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
 	handler.Register(grpcServer, aiAssistantSvc)
