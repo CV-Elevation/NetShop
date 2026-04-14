@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recommend
+  template:
+    metadata:
+      labels:
+        app: recommend
+    spec:
+      containers:
+        - name: recommend
+          image: netshop/recommend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50054
+              name: grpc
+          env:
+            - name: RECOMMEND_GRPC_ADDR
+              value: ":50054"
+          readinessProbe:
+            tcpSocket:
+              port: 50054
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50054
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommend
+spec:
+  selector:
+    app: recommend
+  ports:
+    - name: grpc
+      port: 50054
+      targetPort: 50054

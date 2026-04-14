@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netshop-config
+data:
+  # For local development with docker-compose infra outside K8s.
+  DATABASE_URL: postgres://netshop:secret@host.docker.internal:5432/netshop?sslmode=disable
+  KNOWLEDGE_DB_DSN: postgres://netshop:secret@host.docker.internal:5432/netshop?sslmode=disable
+  REDIS_ADDR: host.docker.internal:6379

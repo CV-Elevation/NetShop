@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netshop-config
+data:
+  # In-cluster defaults; override in overlays/dev when using host docker-compose infra.
+  DATABASE_URL: postgres://netshop:secret@postgres:5432/netshop?sslmode=disable
+  KNOWLEDGE_DB_DSN: postgres://netshop:secret@postgres:5432/netshop?sslmode=disable
+  REDIS_ADDR: redis:6379
+
+  USER_SERVICE_ADDR: user:50051
+  EMAIL_SERVICE_ADDR: email:50052
+  PRODUCT_SERVICE_ADDR: product:50053
+  RECOMMEND_SERVICE_ADDR: recommend:50054
+  AD_SERVICE_ADDR: ad:50055
+  CART_SERVICE_ADDR: cart:50056
+  AIASSISTANT_SERVICE_ADDR: aiassistant:50057
+
+  PRODUCT_GRPC_ADDR: product:50053
+
+  LOCAL_INTENT_MODEL_ENABLED: "false"
+  PRODUCT_QUERY_LLM_ENABLED: "false"

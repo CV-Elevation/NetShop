@@ -1,2 +1,3 @@
 .env
 .vscode/
+k8s/overlays/dev/secret-dev.local.env

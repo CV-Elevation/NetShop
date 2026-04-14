@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: netshop
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - user.yaml
+  - email.yaml
+  - product.yaml
+  - recommend.yaml
+  - ad.yaml
+  - cart.yaml
+  - aiassistant.yaml
+  - frontend.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: netshop

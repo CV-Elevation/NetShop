@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ad
+  template:
+    metadata:
+      labels:
+        app: ad
+    spec:
+      containers:
+        - name: ad
+          image: netshop/ad:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50055
+              name: grpc
+          env:
+            - name: AD_GRPC_ADDR
+              value: ":50055"
+          readinessProbe:
+            tcpSocket:
+              port: 50055
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50055
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ad
+spec:
+  selector:
+    app: ad
+  ports:
+    - name: grpc
+      port: 50055
+      targetPort: 50055

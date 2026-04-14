@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiassistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aiassistant
+  template:
+    metadata:
+      labels:
+        app: aiassistant
+    spec:
+      containers:
+        - name: aiassistant
+          image: netshop/aiassistant:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50057
+              name: grpc
+          env:
+            - name: AIASSISTANT_GRPC_ADDR
+              value: ":50057"
+            - name: PRODUCT_GRPC_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: netshop-config
+                  key: PRODUCT_GRPC_ADDR
+            - name: KNOWLEDGE_DB_DSN
+              valueFrom:
+                configMapKeyRef:
+                  name: netshop-config
+                  key: KNOWLEDGE_DB_DSN
+            - name: LOCAL_INTENT_MODEL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: netshop-config
+                  key: LOCAL_INTENT_MODEL_ENABLED
+            - name: PRODUCT_QUERY_LLM_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: netshop-config
+                  key: PRODUCT_QUERY_LLM_ENABLED
+            - name: ARK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: netshop-secret
+                  key: ARK_API_KEY
+          readinessProbe:
+            tcpSocket:
+              port: 50057
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50057
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiassistant
+spec:
+  selector:
+    app: aiassistant
+  ports:
+    - name: grpc
+      port: 50057
+      targetPort: 50057
