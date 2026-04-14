@@ -29,5 +29,23 @@ func (s *AIAssistantService) Chat(ctx context.Context, req *aiassistantpb.ChatRe
 }
 
 func (s *AIAssistantService) ChatStream(ctx context.Context, req *aiassistantpb.ChatRequest, send func(*aiassistantpb.ChatChunk) error) error {
-	return nil
+	return s.agent.Stream(ctx, req.GetMessage(), func(event agent.StreamEvent) error {
+		chunk := &aiassistantpb.ChatChunk{ChunkType: event.Type}
+		switch event.Type {
+		case "text":
+			chunk.Delta = event.Delta
+		case "tool_status":
+			chunk.ToolCall = &aiassistantpb.ToolCall{
+				ToolName: event.ToolName,
+				Status:   event.ToolStatus,
+				Summary:  event.ToolSummary,
+			}
+		case "done":
+			chunk.Done = true
+		default:
+			chunk.Delta = event.Delta
+		}
+
+		return send(chunk)
+	})
 }
